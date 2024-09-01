@@ -175,6 +175,12 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <repositories>
+        <repository>
+            <id>local-maven-repo</id>
+            <url>file://${user.home}/.m2/repository</url>
+        </repository>
+    </repositories>
     <build>
         <plugins>
             <plugin>

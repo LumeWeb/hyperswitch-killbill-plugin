@@ -51,6 +51,8 @@ import org.killbill.billing.util.callcontext.TenantContext;
 import org.killbill.billing.util.entity.Pagination;
 import org.killbill.clock.Clock;
 import java.sql.SQLException;
+
+import com.hyperswitch.client.model.RecurringDetails;
 import feign.FeignException.BadRequest;
 
 import com.hyperswitch.client.HsApiClient;
@@ -107,8 +109,8 @@ public class HyperswitchPaymentPluginApi extends
         PaymentsResponse response = null;
         try {
             HyperswitchPaymentMethodsRecord record = this.hyperswitchDao.getPaymentMethod(kbPaymentMethodId.toString());
-            String mandate_id = record.getHyperswitchId();
-            paymentsCreateRequest.setMandateId(mandate_id);
+            String payment_method_id = record.getHyperswitchId();
+            paymentsCreateRequest.recurringDetails(new RecurringDetails("payment_method_id",payment_method_id));
             PaymentsApi ClientApi = buildHyperswitchClient(context);
             try {
                 response = ClientApi.createAPayment(paymentsCreateRequest);
@@ -229,8 +231,8 @@ public class HyperswitchPaymentPluginApi extends
         PaymentsResponse response = null;
         try {
             HyperswitchPaymentMethodsRecord record = this.hyperswitchDao.getPaymentMethod(kbPaymentMethodId.toString());
-            String mandate_id = record.getHyperswitchId();
-            paymentsCreateRequest.setMandateId(mandate_id);
+            String payment_method_id = record.getHyperswitchId();
+            paymentsCreateRequest.recurringDetails(new RecurringDetails("payment_method_id",payment_method_id));
             PaymentsApi ClientApi = buildHyperswitchClient(context);
             try {
                 response = ClientApi.createAPayment(paymentsCreateRequest);
@@ -310,7 +312,7 @@ public class HyperswitchPaymentPluginApi extends
                     String message = responseBody.toString();
                     throw new PaymentPluginApiException(message, e);
                 }
-        
+
                 return new HyperswitchPaymentTransactionInfoPlugin(
                         hyperswitchRecord,
                         kbPaymentId,
