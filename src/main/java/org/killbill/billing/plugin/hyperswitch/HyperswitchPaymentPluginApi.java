@@ -20,6 +20,7 @@
 package org.killbill.billing.plugin.hyperswitch;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,7 @@ import java.sql.SQLException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hyperswitch.client.ApiClient.Api;
 import com.hyperswitch.client.api.PaymentMethodsApi;
 import com.hyperswitch.client.model.ApiResponse;
 import com.hyperswitch.client.model.PaymentRetrieveBody;
@@ -134,6 +136,13 @@ public class HyperswitchPaymentPluginApi extends
                             response,
                             utcNow,
                             context.getTenantId());
+
+                    // Add payment properties needed by client
+                    final List<PluginProperty> paymentProperties = new ArrayList<PluginProperty>();
+                    paymentProperties.add(new PluginProperty("client_secret", response.getClientSecret(), false));
+                    paymentProperties.add(new PluginProperty("payment_id", response.getPaymentId(), false));
+                    paymentProperties.add(new PluginProperty("next_action", response.getNextAction(), false));
+                    paymentProperties.add(new PluginProperty("return_url", response.getReturnUrl(), false));
                 } catch (SQLException e) {
                     logger.error("[AuthorizePayment]  encountered a database error ", e);
                     return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
@@ -161,7 +170,11 @@ public class HyperswitchPaymentPluginApi extends
                 response.getReferenceId(),
                 DateTime.now(),
                 DateTime.now(),
-                null);
+                new ArrayList<>() {{
+                    for (PluginProperty prop : properties) {
+                        add(prop);
+                    }
+                }});
     }
 
     @Override
@@ -256,6 +269,13 @@ public class HyperswitchPaymentPluginApi extends
                             response,
                             utcNow,
                             context.getTenantId());
+
+                    // Add payment properties needed by client
+                    final List<PluginProperty> paymentProperties = new ArrayList<PluginProperty>();
+                    paymentProperties.add(new PluginProperty("client_secret", response.getClientSecret(), false));
+                    paymentProperties.add(new PluginProperty("payment_id", response.getPaymentId(), false));
+                    paymentProperties.add(new PluginProperty("next_action", response.getNextAction(), false));
+                    paymentProperties.add(new PluginProperty("return_url", response.getReturnUrl(), false));
                 } catch (SQLException e) {
                     logger.error("[purchasePayment]  encountered a database error ", e);
                     return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
@@ -283,7 +303,11 @@ public class HyperswitchPaymentPluginApi extends
                 response.getReferenceId(),
                 DateTime.now(),
                 DateTime.now(),
-                null);
+                new ArrayList<>() {{
+                    for (PluginProperty prop : properties) {
+                        add(prop);
+                    }
+                }});
     }
 
     @Override
@@ -650,7 +674,7 @@ public class HyperswitchPaymentPluginApi extends
         throw new UnsupportedOperationException("Unimplemented method 'getPaymentMethodId'");
     }
 
-    private <T> T buildHyperswitchClient(final TenantContext tenantContext, Class<T> apiClass) {
+    private <T extends Api> T buildHyperswitchClient(final TenantContext tenantContext, final Class<T> apiClass) {
         final HyperswitchConfigProperties config = hyperswitchConfigurationHandler
                 .getConfigurable(tenantContext.getTenantId());
         if (config == null || config.getHSApiKey() == null || config.getHSApiKey().isEmpty()) {
@@ -670,14 +694,7 @@ public class HyperswitchPaymentPluginApi extends
     }
 
     private RefundsApi buildHyperswitchRefundsClient(final TenantContext tenantContext) {
-        final HyperswitchConfigProperties config = hyperswitchConfigurationHandler
-                .getConfigurable(tenantContext.getTenantId());
-        if (config == null || config.getHSApiKey() == null || config.getHSApiKey().isEmpty()) {
-            logger.warn("Per-tenant properties not configured");
-            return null;
-        }
-        final RefundsApi client = new ApiClient("api_key", config.getHSApiKey()).buildClient(RefundsApi.class);
-        return client;
+        return buildHyperswitchClient(tenantContext, RefundsApi.class);
     }
 
     @Override
