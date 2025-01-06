@@ -80,7 +80,7 @@
         <dependency>
             <groupId>io.github.juspay.hyperswitch</groupId>
             <artifactId>hyperswitch-java-client</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.1</version>
         </dependency>
         <dependency>
             <groupId>io.github.openfeign</groupId>
@@ -186,7 +186,6 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>1.6</version>
                 <configuration>
-                    <serverId>sign-key-id</serverId>
                 </configuration>
                 <executions>
                     <execution>
@@ -227,4 +226,13 @@
             </plugin>
         </plugins>
     </build>
+    <repositories>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/lumeweb/hyperswitch-java-client</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 </project>
