@@ -7,7 +7,7 @@ package org.killbill.billing.plugin.hyperswitch.dao.gen;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchHppRequests;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchPaymentMethods;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchResponses;
-
+import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchWebhookEvents;
 
 /**
  * Convenience access to all tables in killbill
@@ -29,4 +29,9 @@ public class Tables {
      * The table <code>killbill.hyperswitch_responses</code>.
      */
     public static final HyperswitchResponses HYPERSWITCH_RESPONSES = HyperswitchResponses.HYPERSWITCH_RESPONSES;
+
+    /**
+     * The table <code>killbill.hyperswitch_webhook_events</code>.
+     */
+    public static final HyperswitchWebhookEvents HYPERSWITCH_WEBHOOK_EVENTS = HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS;
 }

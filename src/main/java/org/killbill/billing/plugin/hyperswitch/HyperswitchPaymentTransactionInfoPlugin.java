@@ -34,7 +34,6 @@ import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.records.Hyperswitc
 import com.google.common.base.Strings;
 
 public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransactionInfoPlugin {
-	private final HyperswitchResponsesRecord hyperswitchResponseRecord;
 
 	public static HyperswitchPaymentTransactionInfoPlugin build(
 			final HyperswitchResponsesRecord HyperswitchResponsesRecord) {
@@ -72,7 +71,6 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
 		super(kbPaymentId, kbTransactionPaymentPaymentId, transactionType, amount, currency, pluginStatus, gatewayError,
 				gatewayErrorCode, firstPaymentReferenceId, secondPaymentReferenceId, createdDate, effectiveDate,
 				properties);
-		this.hyperswitchResponseRecord = hyperswitchResponsesRecord;
 	}
 
 	public static PaymentTransactionInfoPlugin cancelPaymentTransactionInfoPlugin(
@@ -99,11 +97,15 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
         final String status = (String) additionalData.get("status");
         if ("succeeded".equals(status) || "requires_capture".equals(status)) {
             return PaymentPluginStatus.PROCESSED;
-        } else if("cancelled".equals(status)) {
-			return PaymentPluginStatus.CANCELED;
-		}
-		else if ("processing".equals(status)) {
+        } else if ("processing".equals(status) || 
+                   "requires_payment_method".equals(status) ||
+                   "requires_confirmation".equals(status) ||
+                   "requires_customer_action".equals(status)) {
             return PaymentPluginStatus.PENDING;
+        } else if ("failed".equals(status)) {
+            return PaymentPluginStatus.ERROR;
+        } else if ("cancelled".equals(status)) {
+            return PaymentPluginStatus.CANCELED;
         } else {
             return PaymentPluginStatus.UNDEFINED;
         }

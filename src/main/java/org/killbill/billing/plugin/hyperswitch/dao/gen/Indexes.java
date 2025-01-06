@@ -10,7 +10,7 @@ import org.jooq.impl.Internal;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchHppRequests;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchPaymentMethods;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchResponses;
-
+import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchWebhookEvents;
 
 /**
  * A class modelling indexes of tables of the <code>killbill</code> schema.
@@ -28,6 +28,9 @@ public class Indexes {
     public static final Index HYPERSWITCH_RESPONSES_HYPERSWITCH_RESPONSES_KB_PAYMENT_ID = Indexes0.HYPERSWITCH_RESPONSES_HYPERSWITCH_RESPONSES_KB_PAYMENT_ID;
     public static final Index HYPERSWITCH_RESPONSES_HYPERSWITCH_RESPONSES_KB_PAYMENT_TRANSACTION_ID = Indexes0.HYPERSWITCH_RESPONSES_HYPERSWITCH_RESPONSES_KB_PAYMENT_TRANSACTION_ID;
     public static final Index HYPERSWITCH_RESPONSES_HYPERSWITCH_RESPONSES_PAYMENT_ATTEMPT_ID = Indexes0.HYPERSWITCH_RESPONSES_HYPERSWITCH_RESPONSES_PAYMENT_ATTEMPT_ID;
+    public static final Index HYPERSWITCH_WEBHOOK_EVENTS_PAYMENT = Indexes0.HYPERSWITCH_WEBHOOK_EVENTS_PAYMENT;
+    public static final Index HYPERSWITCH_WEBHOOK_EVENTS_TRANSACTION = Indexes0.HYPERSWITCH_WEBHOOK_EVENTS_TRANSACTION;
+    public static final Index HYPERSWITCH_WEBHOOK_EVENTS_HYPERSWITCH_ID = Indexes0.HYPERSWITCH_WEBHOOK_EVENTS_HYPERSWITCH_ID;
 
     // -------------------------------------------------------------------------
     // [#1459] distribute members to avoid static initialisers > 64kb
@@ -40,5 +43,8 @@ public class Indexes {
         public static Index HYPERSWITCH_RESPONSES_HYPERSWITCH_RESPONSES_KB_PAYMENT_ID = Internal.createIndex("hyperswitch_responses_kb_payment_id", HyperswitchResponses.HYPERSWITCH_RESPONSES, new OrderField[] { HyperswitchResponses.HYPERSWITCH_RESPONSES.KB_PAYMENT_ID }, false);
         public static Index HYPERSWITCH_RESPONSES_HYPERSWITCH_RESPONSES_KB_PAYMENT_TRANSACTION_ID = Internal.createIndex("hyperswitch_responses_kb_payment_transaction_id", HyperswitchResponses.HYPERSWITCH_RESPONSES, new OrderField[] { HyperswitchResponses.HYPERSWITCH_RESPONSES.KB_PAYMENT_TRANSACTION_ID }, false);
         public static Index HYPERSWITCH_RESPONSES_HYPERSWITCH_RESPONSES_PAYMENT_ATTEMPT_ID = Internal.createIndex("hyperswitch_responses_hyperswitch_id", HyperswitchResponses.HYPERSWITCH_RESPONSES, new OrderField[] { HyperswitchResponses.HYPERSWITCH_RESPONSES.PAYMENT_ATTEMPT_ID }, false);
+        public static Index HYPERSWITCH_WEBHOOK_EVENTS_PAYMENT = Internal.createIndex("hyperswitch_webhook_events_payment", HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS, new OrderField[] {HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS.KB_PAYMENT_ID }, false);
+        public static Index HYPERSWITCH_WEBHOOK_EVENTS_TRANSACTION = Internal.createIndex("hyperswitch_webhook_events_transaction", HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS, new OrderField[] { HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS.KB_PAYMENT_TRANSACTION_ID }, false);
+        public static Index HYPERSWITCH_WEBHOOK_EVENTS_HYPERSWITCH_ID = Internal.createIndex("hyperswitch_webhook_events_hyperswitch_id", HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS, new OrderField[] { HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS.HYPERSWITCH_PAYMENT_ID }, false);
     }
 }

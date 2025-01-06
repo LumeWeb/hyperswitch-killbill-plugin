@@ -23,6 +23,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -37,30 +38,40 @@ import org.killbill.billing.payment.api.PluginProperty;
 import org.killbill.billing.payment.api.TransactionType;
 import org.killbill.billing.plugin.api.PluginProperties;
 import org.killbill.billing.plugin.dao.payment.PluginPaymentDao;
-
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.google.common.collect.ImmutableMap;
-import com.hyperswitch.client.model.PaymentsResponse;
-import com.hyperswitch.client.model.RefundResponse;
-
 import org.killbill.billing.plugin.hyperswitch.HyperswitchPluginProperties;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchPaymentMethods;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchResponses;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.records.HyperswitchPaymentMethodsRecord;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.records.HyperswitchResponsesRecord;
+import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.records.HyperswitchWebhookEventsRecord;
 import org.killbill.billing.plugin.hyperswitch.exception.FormaterException;
+import org.killbill.clock.Clock;
 
-import static org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchHppRequests.HYPERSWITCH_HPP_REQUESTS;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import com.hyperswitch.client.model.PaymentsResponse;
+import com.hyperswitch.client.model.RefundResponse;
+
 import static org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS;
 import static org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchResponses.HYPERSWITCH_RESPONSES;
+import static org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS;
 
 public class HyperswitchDao extends
         PluginPaymentDao<HyperswitchResponsesRecord, HyperswitchResponses, HyperswitchPaymentMethodsRecord, HyperswitchPaymentMethods> {
 
-    public HyperswitchDao(final DataSource dataSource) throws SQLException {
+    private static final ObjectMapper staticObjectMapper = new ObjectMapper();
+    static {
+        staticObjectMapper.setSerializationInclusion(Include.NON_EMPTY);
+    }
+
+    private final Clock clock;
+
+    public HyperswitchDao(final DataSource dataSource, final Clock clock) throws SQLException {
         super(HYPERSWITCH_RESPONSES, HYPERSWITCH_PAYMENT_METHODS, dataSource);
         // Save space in the database
         objectMapper.setSerializationInclusion(Include.NON_EMPTY);
+        this.clock = clock;
     }
 
     // Payment methods
@@ -299,13 +310,13 @@ public class HyperswitchDao extends
   }
 
 
-    public static Map fromAdditionalData(@Nullable final String additionalData) {
+    private Map fromAdditionalData(@Nullable final String additionalData) {
         if (additionalData == null) {
             return Collections.emptyMap();
         }
 
         try {
-            return objectMapper.readValue(additionalData, Map.class);
+            return staticObjectMapper.readValue(additionalData, Map.class);
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }
@@ -322,5 +333,69 @@ public class HyperswitchDao extends
         } catch (final IOException e) {
             throw new FormaterException(e);
         }
+    }
+
+    public void addWebhookEvent(
+            final UUID kbAccountId,
+            final UUID kbPaymentId,
+            final UUID kbPaymentTransactionId,
+            final String eventId,
+            final String eventType,
+            final String paymentId,
+            final String status,
+            final String errorCode,
+            final String errorMessage,
+            final String rawEvent,
+            final UUID kbTenantId) throws SQLException {
+        execute(dataSource.getConnection(),
+                conn -> DSL.using(conn, dialect, settings)
+                        .insertInto(HYPERSWITCH_WEBHOOK_EVENTS,
+                                HYPERSWITCH_WEBHOOK_EVENTS.KB_ACCOUNT_ID,
+                                HYPERSWITCH_WEBHOOK_EVENTS.KB_PAYMENT_ID,
+                                HYPERSWITCH_WEBHOOK_EVENTS.KB_PAYMENT_TRANSACTION_ID,
+                                HYPERSWITCH_WEBHOOK_EVENTS.KB_TENANT_ID,
+                                HYPERSWITCH_WEBHOOK_EVENTS.HYPERSWITCH_EVENT_ID,
+                                HYPERSWITCH_WEBHOOK_EVENTS.HYPERSWITCH_EVENT_TYPE,
+                                HYPERSWITCH_WEBHOOK_EVENTS.HYPERSWITCH_PAYMENT_ID,
+                                HYPERSWITCH_WEBHOOK_EVENTS.EVENT_STATUS,
+                                HYPERSWITCH_WEBHOOK_EVENTS.ERROR_CODE,
+                                HYPERSWITCH_WEBHOOK_EVENTS.ERROR_MESSAGE,
+                                HYPERSWITCH_WEBHOOK_EVENTS.RAW_EVENT,
+                                HYPERSWITCH_WEBHOOK_EVENTS.CREATED_DATE)
+                        .values(kbAccountId.toString(),
+                                kbPaymentId.toString(),
+                                kbPaymentTransactionId.toString(),
+                                kbTenantId.toString(),
+                                eventId,
+                                eventType,
+                                paymentId,
+                                status,
+                                errorCode,
+                                errorMessage,
+                                rawEvent,
+                                toLocalDateTime(clock.getUTCNow()))
+                        .execute());
+    }
+
+    public List<HyperswitchWebhookEventsRecord> getWebhookEvents(
+            final UUID kbPaymentId,
+            final UUID kbTenantId) throws SQLException {
+        return execute(dataSource.getConnection(),
+                conn -> DSL.using(conn, dialect, settings)
+                        .selectFrom(HYPERSWITCH_WEBHOOK_EVENTS)
+                        .where(HYPERSWITCH_WEBHOOK_EVENTS.KB_PAYMENT_ID.equal(kbPaymentId.toString()))
+                        .and(HYPERSWITCH_WEBHOOK_EVENTS.KB_TENANT_ID.equal(kbTenantId.toString()))
+                        .orderBy(HYPERSWITCH_WEBHOOK_EVENTS.CREATED_DATE.desc())
+                        .fetch());
+    }
+
+    public boolean isEventProcessed(String eventId, UUID tenantId) throws SQLException {
+        return execute(dataSource.getConnection(),
+            conn -> DSL.using(conn, dialect, settings)
+                .selectCount()
+                .from(HYPERSWITCH_WEBHOOK_EVENTS)
+                .where(HYPERSWITCH_WEBHOOK_EVENTS.HYPERSWITCH_EVENT_ID.equal(eventId))
+                .and(HYPERSWITCH_WEBHOOK_EVENTS.KB_TENANT_ID.equal(tenantId.toString()))
+                .fetchOne(0, Integer.class) > 0);
     }
 }
