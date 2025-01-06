@@ -55,6 +55,7 @@ import java.sql.SQLException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hyperswitch.client.api.PaymentMethodsApi;
 import com.hyperswitch.client.model.ApiResponse;
 import com.hyperswitch.client.model.PaymentRetrieveBody;
 import feign.FeignException.BadRequest;
@@ -503,7 +504,25 @@ public class HyperswitchPaymentPluginApi extends
     @Override
     public void deletePaymentMethod(final UUID kbAccountId, final UUID kbPaymentMethodId,
             final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
+        try {
+            // Mark as deleted in our table
+            hyperswitchDao.deletePaymentMethod(kbPaymentMethodId, context.getTenantId());
 
+            // Get the payment method record to find the payment method ID
+            final HyperswitchPaymentMethodsRecord record = hyperswitchDao.getPaymentMethod(kbPaymentMethodId.toString());
+            if (record != null && record.getHyperswitchId() != null) {
+                // Delete payment method in Hyperswitch
+                PaymentMethodsApi clientApi = buildHyperswitchPaymentMethodsClient(context);
+                try {
+                    clientApi.deleteAPaymentMethod(record.getHyperswitchId());
+                } catch (BadRequest e) {
+                    String responseBody = e.contentUTF8();
+                    throw new PaymentPluginApiException("Failed to delete payment method in Hyperswitch: " + responseBody, e);
+                }
+            }
+        } catch (SQLException e) {
+            throw new PaymentPluginApiException("Failed to delete payment method", e);
+        }
     }
 
     @Override
@@ -631,7 +650,7 @@ public class HyperswitchPaymentPluginApi extends
         throw new UnsupportedOperationException("Unimplemented method 'getPaymentMethodId'");
     }
 
-    private PaymentsApi buildHyperswitchClient(final TenantContext tenantContext) {
+    private <T> T buildHyperswitchClient(final TenantContext tenantContext, Class<T> apiClass) {
         final HyperswitchConfigProperties config = hyperswitchConfigurationHandler
                 .getConfigurable(tenantContext.getTenantId());
         if (config == null || config.getHSApiKey() == null || config.getHSApiKey().isEmpty()) {
@@ -639,7 +658,15 @@ public class HyperswitchPaymentPluginApi extends
             return null;
         }
         final ApiClient apiClient = new ApiClient("api_key", config.getHSApiKey());
-        return apiClient.buildClient(PaymentsApi.class);
+        return apiClient.buildClient(apiClass);
+    }
+
+    private PaymentsApi buildHyperswitchClient(final TenantContext tenantContext) {
+        return buildHyperswitchClient(tenantContext, PaymentsApi.class);
+    }
+
+    private PaymentMethodsApi buildHyperswitchPaymentMethodsClient(final TenantContext tenantContext) {
+        return buildHyperswitchClient(tenantContext, PaymentMethodsApi.class);
     }
 
     private RefundsApi buildHyperswitchRefundsClient(final TenantContext tenantContext) {

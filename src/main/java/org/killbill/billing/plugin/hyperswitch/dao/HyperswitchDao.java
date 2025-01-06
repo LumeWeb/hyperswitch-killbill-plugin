@@ -127,6 +127,22 @@ public class HyperswitchDao extends
                 });
     }
 
+    public void deletePaymentMethod(final UUID kbPaymentMethodId, final UUID kbTenantId) throws SQLException {
+        execute(dataSource.getConnection(),
+                new WithConnectionCallback<Void>() {
+                    @Override
+                    public Void withConnection(final Connection conn) throws SQLException {
+                        DSL.using(conn, dialect, settings)
+                           .update(HYPERSWITCH_PAYMENT_METHODS)
+                           .set(HYPERSWITCH_PAYMENT_METHODS.IS_DELETED, (short) 1)
+                           .where(HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID.equal(kbPaymentMethodId.toString()))
+                           .and(HYPERSWITCH_PAYMENT_METHODS.KB_TENANT_ID.equal(kbTenantId.toString()))
+                           .execute();
+                        return null;
+                    }
+                });
+    }
+
     public HyperswitchResponsesRecord addResponse(final UUID kbAccountId,
             final UUID kbPaymentId,
             final UUID kbPaymentTransactionId,
