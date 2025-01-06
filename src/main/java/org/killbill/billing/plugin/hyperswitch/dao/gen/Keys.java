@@ -12,13 +12,14 @@ import org.jooq.types.ULong;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchHppRequests;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchPaymentMethods;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchResponses;
+import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchWebhookEvents;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.records.HyperswitchHppRequestsRecord;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.records.HyperswitchPaymentMethodsRecord;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.records.HyperswitchResponsesRecord;
-
+import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.records.HyperswitchWebhookEventsRecord;
 
 /**
- * A class modelling foreign key relationships and constraints of tables of 
+ * A class modelling foreign key relationships and constraints of tables of
  * the <code>killbill</code> schema.
  */
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
@@ -31,6 +32,7 @@ public class Keys {
     public static final Identity<HyperswitchHppRequestsRecord, ULong> IDENTITY_HYPERSWITCH_HPP_REQUESTS = Identities0.IDENTITY_HYPERSWITCH_HPP_REQUESTS;
     public static final Identity<HyperswitchPaymentMethodsRecord, ULong> IDENTITY_HYPERSWITCH_PAYMENT_METHODS = Identities0.IDENTITY_HYPERSWITCH_PAYMENT_METHODS;
     public static final Identity<HyperswitchResponsesRecord, ULong> IDENTITY_HYPERSWITCH_RESPONSES = Identities0.IDENTITY_HYPERSWITCH_RESPONSES;
+    public static final Identity<HyperswitchWebhookEventsRecord, ULong> IDENTITY_HYPERSWITCH_WEBHOOK_EVENTS = Identities0.IDENTITY_HYPERSWITCH_WEBHOOK_EVENTS;
 
     // -------------------------------------------------------------------------
     // UNIQUE and PRIMARY KEY definitions
@@ -44,6 +46,8 @@ public class Keys {
     public static final UniqueKey<HyperswitchPaymentMethodsRecord> KEY_HYPERSWITCH_PAYMENT_METHODS_HYPERSWITCH_PAYMENT_METHODS_KB_PAYMENT_ID = UniqueKeys0.KEY_HYPERSWITCH_PAYMENT_METHODS_HYPERSWITCH_PAYMENT_METHODS_KB_PAYMENT_ID;
     public static final UniqueKey<HyperswitchResponsesRecord> KEY_HYPERSWITCH_RESPONSES_PRIMARY = UniqueKeys0.KEY_HYPERSWITCH_RESPONSES_PRIMARY;
     public static final UniqueKey<HyperswitchResponsesRecord> KEY_HYPERSWITCH_RESPONSES_RECORD_ID = UniqueKeys0.KEY_HYPERSWITCH_RESPONSES_RECORD_ID;
+    public static final UniqueKey<HyperswitchWebhookEventsRecord> KEY_HYPERSWITCH_WEBHOOK_EVENTS_PRIMARY = UniqueKeys0.KEY_HYPERSWITCH_WEBHOOK_EVENTS_PRIMARY;
+    public static final UniqueKey<HyperswitchWebhookEventsRecord> KEY_HYPERSWITCH_WEBHOOK_EVENTS_RECORD_ID = UniqueKeys0.KEY_HYPERSWITCH_WEBHOOK_EVENTS_RECORD_ID;
 
     // -------------------------------------------------------------------------
     // FOREIGN KEY definitions
@@ -58,6 +62,7 @@ public class Keys {
         public static Identity<HyperswitchHppRequestsRecord, ULong> IDENTITY_HYPERSWITCH_HPP_REQUESTS = Internal.createIdentity(HyperswitchHppRequests.HYPERSWITCH_HPP_REQUESTS, HyperswitchHppRequests.HYPERSWITCH_HPP_REQUESTS.RECORD_ID);
         public static Identity<HyperswitchPaymentMethodsRecord, ULong> IDENTITY_HYPERSWITCH_PAYMENT_METHODS = Internal.createIdentity(HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS, HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.RECORD_ID);
         public static Identity<HyperswitchResponsesRecord, ULong> IDENTITY_HYPERSWITCH_RESPONSES = Internal.createIdentity(HyperswitchResponses.HYPERSWITCH_RESPONSES, HyperswitchResponses.HYPERSWITCH_RESPONSES.RECORD_ID);
+        public static Identity<HyperswitchWebhookEventsRecord, ULong> IDENTITY_HYPERSWITCH_WEBHOOK_EVENTS = Internal.createIdentity(HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS, HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS.RECORD_ID);
     }
 
     private static class UniqueKeys0 {
@@ -69,5 +74,7 @@ public class Keys {
         public static final UniqueKey<HyperswitchPaymentMethodsRecord> KEY_HYPERSWITCH_PAYMENT_METHODS_HYPERSWITCH_PAYMENT_METHODS_KB_PAYMENT_ID = Internal.createUniqueKey(HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS, "KEY_hyperswitch_payment_methods_hyperswitch_payment_methods_kb_payment_id", new TableField[] { HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID }, true);
         public static final UniqueKey<HyperswitchResponsesRecord> KEY_HYPERSWITCH_RESPONSES_PRIMARY = Internal.createUniqueKey(HyperswitchResponses.HYPERSWITCH_RESPONSES, "KEY_hyperswitch_responses_PRIMARY", new TableField[] { HyperswitchResponses.HYPERSWITCH_RESPONSES.RECORD_ID }, true);
         public static final UniqueKey<HyperswitchResponsesRecord> KEY_HYPERSWITCH_RESPONSES_RECORD_ID = Internal.createUniqueKey(HyperswitchResponses.HYPERSWITCH_RESPONSES, "KEY_hyperswitch_responses_record_id", new TableField[] { HyperswitchResponses.HYPERSWITCH_RESPONSES.RECORD_ID }, true);
+        public static final UniqueKey<HyperswitchWebhookEventsRecord> KEY_HYPERSWITCH_WEBHOOK_EVENTS_PRIMARY = Internal.createUniqueKey(HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS, "KEY_hyperswitch_webhook_events_PRIMARY", new TableField[] { HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS.RECORD_ID }, true);
+        public static final UniqueKey<HyperswitchWebhookEventsRecord> KEY_HYPERSWITCH_WEBHOOK_EVENTS_RECORD_ID = Internal.createUniqueKey(HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS, "KEY_hyperswitch_webhook_events_record_id", new TableField[] { HyperswitchWebhookEvents.HYPERSWITCH_WEBHOOK_EVENTS.RECORD_ID }, true);
     }
 }

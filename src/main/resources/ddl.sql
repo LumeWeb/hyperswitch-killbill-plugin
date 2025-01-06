@@ -17,7 +17,7 @@
 
 /*! SET default_storage_engine=INNODB */;
 
-drop table if exists create table hyperswitch_payment_methods ;
+drop table if exists hyperswitch_payment_methods;
 create table hyperswitch_payment_methods (
   record_id serial
 , kb_account_id char(36) not null
@@ -55,3 +55,24 @@ create table hyperswitch_responses (
 create index hyperswitch_responses_kb_payment_id on hyperswitch_responses(kb_payment_id);
 create index hyperswitch_responses_kb_payment_transaction_id on hyperswitch_responses(kb_payment_transaction_id);
 create index hyperswitch_responses_payment_attmept_id on hyperswitch_responses(payment_attempt_id);
+
+drop table if exists hyperswitch_webhook_events;
+create table hyperswitch_webhook_events (
+  record_id serial
+, kb_account_id char(36) not null
+, kb_tenant_id char(36) not null
+, kb_payment_id char(36) not null
+, kb_payment_transaction_id char(36) not null
+, hyperswitch_event_id varchar(255) not null
+, hyperswitch_event_type varchar(64) not null
+, hyperswitch_payment_id varchar(255) not null
+, event_status varchar(32) not null
+, error_code varchar(64)
+, error_message varchar(255)
+, raw_event longtext default null
+, created_date datetime not null
+, primary key(record_id)
+) /*! CHARACTER SET utf8 COLLATE utf8_bin */;
+create index hyperswitch_webhook_events_payment on hyperswitch_webhook_events(kb_payment_id);
+create index hyperswitch_webhook_events_transaction on hyperswitch_webhook_events(kb_payment_transaction_id);
+create index hyperswitch_webhook_events_hyperswitch_id on hyperswitch_webhook_events(hyperswitch_payment_id);

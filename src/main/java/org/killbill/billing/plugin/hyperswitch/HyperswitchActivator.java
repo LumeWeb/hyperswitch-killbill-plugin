@@ -30,6 +30,7 @@ import org.killbill.billing.invoice.plugin.api.InvoicePluginApi;
 import org.killbill.billing.osgi.api.Healthcheck;
 import org.killbill.billing.osgi.api.OSGIPluginProperties;
 import org.killbill.billing.osgi.libs.killbill.KillbillActivatorBase;
+import org.killbill.billing.osgi.libs.killbill.OSGIKillbillClock;
 import org.killbill.billing.osgi.libs.killbill.OSGIKillbillEventDispatcher;
 import org.killbill.billing.osgi.libs.killbill.OSGIKillbillEventDispatcher.OSGIFrameworkEventHandler;
 import org.killbill.billing.payment.plugin.api.PaymentPluginApi;
@@ -54,7 +55,7 @@ public class HyperswitchActivator extends KillbillActivatorBase {
         super.start(context);
 
         final String region = PluginEnvironmentConfig.getRegion(configProperties.getProperties());
-        final HyperswitchDao hyperswitchDao = new HyperswitchDao(dataSource.getDataSource());
+        final HyperswitchDao hyperswitchDao = new HyperswitchDao(dataSource.getDataSource(), clock.getClock());
         logger.info(" starting plugin {}", PLUGIN_NAME);
         // Register an event listener for plugin configuration (optional)
         logger.info("Registering an event listener for plugin configuration");
@@ -70,6 +71,7 @@ public class HyperswitchActivator extends KillbillActivatorBase {
         logger.info("Registering an APIs");
         final PaymentPluginApi paymentPluginApi = new HyperswitchPaymentPluginApi(hyperswitchConfigurationHandler,killbillAPI,configProperties,clock.getClock(),hyperswitchDao);
         registerPaymentPluginApi(context, paymentPluginApi);
+
 
         logger.info("Registering healthcheck");
         // Expose a healthcheck (optional), so other plugins can check on the plugin status

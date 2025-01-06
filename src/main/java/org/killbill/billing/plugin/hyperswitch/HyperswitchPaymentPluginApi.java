@@ -20,6 +20,7 @@
 package org.killbill.billing.plugin.hyperswitch;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -52,6 +53,8 @@ import org.killbill.billing.util.entity.Pagination;
 import org.killbill.clock.Clock;
 import java.sql.SQLException;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hyperswitch.client.model.ApiResponse;
 import com.hyperswitch.client.model.PaymentRetrieveBody;
 import feign.FeignException.BadRequest;
@@ -81,6 +84,7 @@ public class HyperswitchPaymentPluginApi extends
     private static String HS_API_KEY_PROPERTY = "HS_API_KEY_PROPERTY";
     private final HyperswitchConfigurationHandler hyperswitchConfigurationHandler;
     private final HyperswitchDao hyperswitchDao;
+    private final ObjectMapper objectMapper;
 
     public HyperswitchPaymentPluginApi(
             final HyperswitchConfigurationHandler hyperswitchConfigPropertiesConfigurationHandler,
@@ -91,6 +95,7 @@ public class HyperswitchPaymentPluginApi extends
         super(killbillAPI, configProperties, clock, dao);
         this.hyperswitchConfigurationHandler = hyperswitchConfigPropertiesConfigurationHandler;
         this.hyperswitchDao = dao;
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -539,20 +544,19 @@ public class HyperswitchPaymentPluginApi extends
         return null;
     }
 
-    @Override
-    public GatewayNotification processNotification(final String notification, final Iterable<PluginProperty> properties,
-            final CallContext context) throws PaymentPluginApiException {
-        return null;
-    }
 
     private PaymentPluginStatus convertPaymentStatus(IntentStatus paymentStatus) {
         switch (paymentStatus) {
-            case REQUIRES_CAPTURE:
             case SUCCEEDED:
             case PARTIALLY_CAPTURED:
             case PARTIALLY_CAPTURED_AND_CAPTURABLE:
                 return PaymentPluginStatus.PROCESSED;
             case PROCESSING:
+            case REQUIRES_PAYMENT_METHOD:
+            case REQUIRES_CONFIRMATION:
+            case REQUIRES_CUSTOMER_ACTION:
+            case REQUIRES_MERCHANT_ACTION:
+            case REQUIRES_CAPTURE:
                 return PaymentPluginStatus.PENDING;
             case CANCELLED:
                 return PaymentPluginStatus.CANCELED;
@@ -634,8 +638,8 @@ public class HyperswitchPaymentPluginApi extends
             logger.warn("Per-tenant properties not configured");
             return null;
         }
-        final PaymentsApi client = new ApiClient("api_key", config.getHSApiKey()).buildClient(PaymentsApi.class);
-        return client;
+        final ApiClient apiClient = new ApiClient("api_key", config.getHSApiKey());
+        return apiClient.buildClient(PaymentsApi.class);
     }
 
     private RefundsApi buildHyperswitchRefundsClient(final TenantContext tenantContext) {
@@ -647,6 +651,65 @@ public class HyperswitchPaymentPluginApi extends
         }
         final RefundsApi client = new ApiClient("api_key", config.getHSApiKey()).buildClient(RefundsApi.class);
         return client;
+    }
+
+    @Override
+    public GatewayNotification processNotification(final String notification, final Iterable<PluginProperty> properties,
+            final CallContext context) throws PaymentPluginApiException {
+        try {
+            final JsonNode event = objectMapper.readTree(notification);
+            final String eventId = event.path("event_id").asText();
+            final String eventType = event.path("type").asText();
+            final String paymentId = event.path("data").path("payment_id").asText();
+            final String status = event.path("data").path("status").asText();
+            final String errorCode = event.path("data").path("error").path("code").asText();
+            final String errorMessage = event.path("data").path("error").path("message").asText();
+
+            // Check for duplicate event
+            if (hyperswitchDao.isEventProcessed(eventId, context.getTenantId())) {
+                logger.info("Skipping duplicate webhook event {}", eventId);
+                return null;
+            }
+
+            // Find the payment record using the payment ID
+            final HyperswitchResponsesRecord response = this.hyperswitchDao.getSuccessfulResponse(
+                UUID.fromString(paymentId), context.getTenantId());
+
+            if (response == null) {
+                logger.warn("Unable to find payment record for webhook notification: {}", paymentId);
+                return null;
+            }
+
+            // Store webhook event
+            this.hyperswitchDao.addWebhookEvent(
+                UUID.fromString(response.getKbAccountId()),
+                UUID.fromString(response.getKbPaymentId()),
+                UUID.fromString(response.getKbPaymentTransactionId()),
+                event.path("event_id").asText(),
+                eventType,
+                paymentId,
+                status,
+                errorCode,
+                errorMessage,
+                notification,
+                context.getTenantId());
+
+            // Update payment status
+            final Map<String, Object> additionalData = new HashMap<>();
+            additionalData.put("status", status);
+            if (errorCode != null) {
+                additionalData.put("error_code", errorCode);
+            }
+            if (errorMessage != null) {
+                additionalData.put("error_message", errorMessage);
+            }
+
+            this.hyperswitchDao.updateResponse(response, additionalData);
+            return new HyperswitchGatewayNotification(UUID.fromString(response.getKbPaymentId()));
+
+        } catch (Exception e) {
+            throw new PaymentPluginApiException("Error processing notification", e);
+        }
     }
 
     public PaymentTransactionInfoPlugin refundValidations( // Validate this function with currency unit of amount
