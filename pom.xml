@@ -42,8 +42,8 @@
 
         <!-- Required for OSGI bundle -->
         <osgi.private>org.killbill.billing.plugin.hyperswitch.*</osgi.private>
-        <swagger.version>1.6.11</swagger.version>
         <project.build.outputTimestamp>2023-01-01T00:00:00Z</project.build.outputTimestamp>
+        <swagger.version>1.6.11</swagger.version>
     </properties>
 
     <dependencyManagement>
