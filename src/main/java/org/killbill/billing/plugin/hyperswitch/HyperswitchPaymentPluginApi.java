@@ -41,6 +41,7 @@ import org.killbill.billing.payment.plugin.api.PaymentPluginApiException;
 import org.killbill.billing.payment.plugin.api.PaymentPluginStatus;
 import org.killbill.billing.payment.plugin.api.PaymentTransactionInfoPlugin;
 import org.killbill.billing.plugin.api.PluginProperties;
+import org.killbill.billing.plugin.api.payment.PluginPaymentMethodPlugin;
 import org.killbill.billing.plugin.api.payment.PluginPaymentPluginApi;
 import org.killbill.billing.plugin.hyperswitch.dao.HyperswitchDao;
 import org.killbill.billing.plugin.hyperswitch.dao.gen.tables.HyperswitchPaymentMethods;
@@ -52,6 +53,7 @@ import org.killbill.billing.util.callcontext.CallContext;
 import org.killbill.billing.util.callcontext.TenantContext;
 import org.killbill.billing.util.entity.Pagination;
 import org.killbill.clock.Clock;
+
 import java.sql.SQLException;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -82,7 +84,8 @@ import org.slf4j.LoggerFactory;
 // A 'real' payment plugin would of course implement this interface.
 //
 public class HyperswitchPaymentPluginApi extends
-        PluginPaymentPluginApi<HyperswitchResponsesRecord, HyperswitchResponses, HyperswitchPaymentMethodsRecord, HyperswitchPaymentMethods> {
+                                         PluginPaymentPluginApi<HyperswitchResponsesRecord, HyperswitchResponses, HyperswitchPaymentMethodsRecord, HyperswitchPaymentMethods> {
+
     private static final Logger logger = LoggerFactory.getLogger(HyperswitchPaymentPluginApi.class);
     private static String HS_API_KEY_PROPERTY = "HS_API_KEY_PROPERTY";
     private final HyperswitchConfigurationHandler hyperswitchConfigurationHandler;
@@ -90,11 +93,11 @@ public class HyperswitchPaymentPluginApi extends
     private final ObjectMapper objectMapper;
 
     public HyperswitchPaymentPluginApi(
-            final HyperswitchConfigurationHandler hyperswitchConfigPropertiesConfigurationHandler,
-            final OSGIKillbillAPI killbillAPI,
-            final OSGIConfigPropertiesService configProperties,
-            final Clock clock,
-            final HyperswitchDao dao) {
+        final HyperswitchConfigurationHandler hyperswitchConfigPropertiesConfigurationHandler,
+        final OSGIKillbillAPI killbillAPI,
+        final OSGIConfigPropertiesService configProperties,
+        final Clock clock,
+        final HyperswitchDao dao) {
         super(killbillAPI, configProperties, clock, dao);
         this.hyperswitchConfigurationHandler = hyperswitchConfigPropertiesConfigurationHandler;
         this.hyperswitchDao = dao;
@@ -110,28 +113,25 @@ public class HyperswitchPaymentPluginApi extends
                                                          final Currency currency,
                                                          final Iterable<PluginProperty> properties,
                                                          final CallContext context) throws PaymentPluginApiException {
-
         try {
-            // Get payment method record first to fail fast if not found
-            HyperswitchPaymentMethodsRecord paymentMethod = this.hyperswitchDao.getPaymentMethod(kbPaymentMethodId.toString());
+            // Build payment request for initial authorization
+            PaymentsCreateRequest paymentsCreateRequest = new PaymentsCreateRequest();
+            paymentsCreateRequest.setAmount(KillBillMoney.toMinorUnits(currency.toString(), amount));
+            paymentsCreateRequest.setCurrency(convertCurrency(currency));
+            paymentsCreateRequest.confirm(false); // Requires frontend confirmation
+            paymentsCreateRequest.customerId(kbAccountId.toString());
+            paymentsCreateRequest.offSession(false); // This is an interactive session
+            paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
+            paymentsCreateRequest.setCaptureMethod(CaptureMethod.MANUAL);
 
-            // Build request with all required fields
-            PaymentsCreateRequest paymentsCreateRequest = buildPaymentRequest(
-                kbAccountId,
-                amount,
-                currency,
-                paymentMethod.getHyperswitchId(),
-                context.getTenantId()
-                                                                             );
-
-            // Make API call
+            // Call Hyperswitch API
             PaymentsApi clientApi = buildHyperswitchClient(context);
             PaymentsResponse response = executePayment(clientApi, paymentsCreateRequest);
 
-            // Process successful response
+            // Process response
             PaymentPluginStatus paymentPluginStatus = convertPaymentStatus(response.getStatus());
 
-            // Store response in database
+            // Store response in database for tracking
             HyperswitchResponsesRecord hyperswitchRecord = storePaymentResponse(
                 kbAccountId,
                 kbPaymentId,
@@ -142,7 +142,17 @@ public class HyperswitchPaymentPluginApi extends
                 context.getTenantId()
                                                                                );
 
-            // Create plugin properties efficiently - no need for intermediate list
+            // Build properties for frontend
+            List<PluginProperty> paymentProperties = new ArrayList<>();
+            paymentProperties.add(new PluginProperty("client_secret", response.getClientSecret(), false));
+            paymentProperties.add(new PluginProperty("payment_id", response.getPaymentId(), false));
+            if (response.getNextAction() != null) {
+                paymentProperties.add(new PluginProperty("next_action", response.getNextAction(), false));
+            }
+            if (response.getReturnUrl() != null) {
+                paymentProperties.add(new PluginProperty("return_url", response.getReturnUrl(), false));
+            }
+
             return new HyperswitchPaymentTransactionInfoPlugin(
                 hyperswitchRecord,
                 kbPaymentId,
@@ -157,7 +167,7 @@ public class HyperswitchPaymentPluginApi extends
                 response.getReferenceId(),
                 DateTime.now(),
                 DateTime.now(),
-                properties // Pass the original properties directly
+                paymentProperties
             );
 
         } catch (SQLException e) {
@@ -213,8 +223,8 @@ public class HyperswitchPaymentPluginApi extends
 
     @Override
     public PaymentTransactionInfoPlugin capturePayment(final UUID kbAccountId, final UUID kbPaymentId,
-            final UUID kbTransactionId, final UUID kbPaymentMethodId, final BigDecimal amount, final Currency currency,
-            final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
+                                                       final UUID kbTransactionId, final UUID kbPaymentMethodId, final BigDecimal amount, final Currency currency,
+                                                       final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
         HyperswitchResponsesRecord hyperswitchRecord = null;
         try {
             hyperswitchRecord = this.hyperswitchDao.getSuccessfulResponse(kbPaymentId, context.getTenantId());
@@ -224,7 +234,7 @@ public class HyperswitchPaymentPluginApi extends
         } catch (SQLException e) {
             logger.error("[capturePayment]  but we encountered a database error", e);
             return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
-                    TransactionType.CAPTURE, "[capturePayment] but we encountered a database error");
+                TransactionType.CAPTURE, "[capturePayment] but we encountered a database error");
         }
         PaymentPluginStatus paymentPluginStatus = null;
         String payment_id = hyperswitchRecord.getPaymentAttemptId();
@@ -238,9 +248,9 @@ public class HyperswitchPaymentPluginApi extends
             paymentPluginStatus = convertPaymentStatus(response.getStatus());
             try {
                 hyperswitchRecord = this.hyperswitchDao.addResponse(
-                        kbAccountId,
-                        kbPaymentMethodId, kbPaymentMethodId, TransactionType.CAPTURE, amount, currency, response,
-                        DateTime.now(), context.getTenantId());
+                    kbAccountId,
+                    kbPaymentMethodId, kbPaymentMethodId, TransactionType.CAPTURE, amount, currency, response,
+                    DateTime.now(), context.getTenantId());
             } catch (final SQLException e) {
                 throw new PaymentPluginApiException("Unable to refresh payment", e);
             }
@@ -251,79 +261,72 @@ public class HyperswitchPaymentPluginApi extends
         }
 
         return new HyperswitchPaymentTransactionInfoPlugin(
-                hyperswitchRecord,
-                kbPaymentId,
-                kbTransactionId,
-                TransactionType.CAPTURE,
-                amount,
-                currency,
-                paymentPluginStatus,
-                response.getErrorMessage(),
-                response.getErrorCode(),
-                response.getPaymentId(),
-                response.getReferenceId(),
-                DateTime.now(),
-                DateTime.now(),
-                null);
+            hyperswitchRecord,
+            kbPaymentId,
+            kbTransactionId,
+            TransactionType.CAPTURE,
+            amount,
+            currency,
+            paymentPluginStatus,
+            response.getErrorMessage(),
+            response.getErrorCode(),
+            response.getPaymentId(),
+            response.getReferenceId(),
+            DateTime.now(),
+            DateTime.now(),
+            null);
     }
 
     @Override
-    public PaymentTransactionInfoPlugin purchasePayment(final UUID kbAccountId, final UUID kbPaymentId,
-            final UUID kbTransactionId, final UUID kbPaymentMethodId, final BigDecimal amount, final Currency currency,
-            final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
-        logger.info("[purchasePayment] calling purchase payment");
-        HyperswitchResponsesRecord hyperswitchRecord = null;
-        String profileId = hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId();
-        PaymentsCreateRequest paymentsCreateRequest = new PaymentsCreateRequest();
-        paymentsCreateRequest.setAmount(KillBillMoney.toMinorUnits(currency.toString(), amount));
-        paymentsCreateRequest.setCurrency(convertCurrency(currency));
-        paymentsCreateRequest.confirm(true);
-        paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
-        paymentsCreateRequest.customerId(kbAccountId.toString());
-        paymentsCreateRequest.offSession(true);
-        PaymentPluginStatus paymentPluginStatus = null;
-        PaymentsResponse response = null;
-        try {
-            HyperswitchPaymentMethodsRecord record = this.hyperswitchDao.getPaymentMethod(kbPaymentMethodId.toString());
-            String mandate_id = record.getHyperswitchId();
-            paymentsCreateRequest.setMandateId(mandate_id);
-            PaymentsApi ClientApi = buildHyperswitchClient(context);
-            try {
-                response = ClientApi.createAPayment(paymentsCreateRequest);
-                try {
-                    paymentPluginStatus = convertPaymentStatus(response.getStatus());
-                    final DateTime utcNow = clock.getUTCNow();
-                    hyperswitchRecord = this.hyperswitchDao.addResponse(
-                            kbAccountId,
-                            kbPaymentId,
-                            kbTransactionId,
-                            TransactionType.PURCHASE,
-                            amount,
-                            currency,
-                            response,
-                            utcNow,
-                            context.getTenantId());
+    public PaymentTransactionInfoPlugin purchasePayment(final UUID kbAccountId,
+                                                        final UUID kbPaymentId,
+                                                        final UUID kbTransactionId,
+                                                        final UUID kbPaymentMethodId,
+                                                        final BigDecimal amount,
+                                                        final Currency currency,
+                                                        final Iterable<PluginProperty> properties,
+                                                        final CallContext context) throws PaymentPluginApiException {
 
-                    // Add payment properties needed by client
-                    final List<PluginProperty> paymentProperties = new ArrayList<PluginProperty>();
-                    paymentProperties.add(new PluginProperty("client_secret", response.getClientSecret(), false));
-                    paymentProperties.add(new PluginProperty("payment_id", response.getPaymentId(), false));
-                    paymentProperties.add(new PluginProperty("next_action", response.getNextAction(), false));
-                    paymentProperties.add(new PluginProperty("return_url", response.getReturnUrl(), false));
-                } catch (SQLException e) {
-                    logger.error("[purchasePayment]  encountered a database error ", e);
-                    return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
-                            TransactionType.PURCHASE, "[purchasePayment]  encountered a database error ");
-                }
-            } catch (BadRequest e) {
-                String responseBody = e.contentUTF8();
-                String message = responseBody.toString();
-                throw new PaymentPluginApiException(message, e);
+        logger.info("[purchasePayment] calling purchase payment for account {}", kbAccountId);
+
+        try {
+            // Get mandate from our storage
+            HyperswitchPaymentMethodsRecord paymentMethod = this.hyperswitchDao.getPaymentMethod(kbPaymentMethodId.toString());
+            if (paymentMethod == null || paymentMethod.getHyperswitchId() == null) {
+                throw new PaymentPluginApiException("No mandate found for payment method", new IllegalStateException());
             }
-        } catch (SQLException e) {
-            throw new PaymentPluginApiException("Couldn't find payment method id for account", e);
-        }
-        return new HyperswitchPaymentTransactionInfoPlugin(
+
+            // Build payment request
+            PaymentsCreateRequest paymentsCreateRequest = new PaymentsCreateRequest();
+            paymentsCreateRequest.setAmount(KillBillMoney.toMinorUnits(currency.toString(), amount));
+            paymentsCreateRequest.setCurrency(convertCurrency(currency));
+            paymentsCreateRequest.confirm(true);
+            paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
+            paymentsCreateRequest.customerId(kbAccountId.toString());
+            paymentsCreateRequest.offSession(true);
+            paymentsCreateRequest.setMandateId(paymentMethod.getHyperswitchId());
+
+            // Make API call
+            PaymentsApi clientApi = buildHyperswitchClient(context);
+            PaymentsResponse response = clientApi.createAPayment(paymentsCreateRequest);
+
+            // Process response
+            PaymentPluginStatus paymentPluginStatus = convertPaymentStatus(response.getStatus());
+
+            // Store in our responses table
+            HyperswitchResponsesRecord hyperswitchRecord = this.hyperswitchDao.addResponse(
+                kbAccountId,
+                kbPaymentId,
+                kbTransactionId,
+                TransactionType.PURCHASE,
+                amount,
+                currency,
+                response,
+                clock.getUTCNow(),
+                context.getTenantId()
+                                                                                          );
+
+            return new HyperswitchPaymentTransactionInfoPlugin(
                 hyperswitchRecord,
                 kbPaymentId,
                 kbTransactionId,
@@ -337,11 +340,12 @@ public class HyperswitchPaymentPluginApi extends
                 response.getReferenceId(),
                 DateTime.now(),
                 DateTime.now(),
-                new ArrayList<>() {{
-                    for (PluginProperty prop : properties) {
-                        add(prop);
-                    }
-                }});
+                (List<PluginProperty>) properties
+            );
+
+        } catch (SQLException e) {
+            throw new PaymentPluginApiException("Failed to process purchase payment", e);
+        }
     }
 
     @Override
@@ -419,15 +423,15 @@ public class HyperswitchPaymentPluginApi extends
 
     @Override
     public PaymentTransactionInfoPlugin creditPayment(final UUID kbAccountId, final UUID kbPaymentId,
-            final UUID kbTransactionId, final UUID kbPaymentMethodId, final BigDecimal amount, final Currency currency,
-            final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
+                                                      final UUID kbTransactionId, final UUID kbPaymentMethodId, final BigDecimal amount, final Currency currency,
+                                                      final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
         return null;
     }
 
     @Override
     public PaymentTransactionInfoPlugin refundPayment(final UUID kbAccountId, final UUID kbPaymentId,
-            final UUID kbTransactionId, final UUID kbPaymentMethodId, final BigDecimal amount, final Currency currency,
-            final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
+                                                      final UUID kbTransactionId, final UUID kbPaymentMethodId, final BigDecimal amount, final Currency currency,
+                                                      final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
         logger.info("Refund Payment for account {}", kbAccountId);
         HyperswitchResponsesRecord hyperswitchRecord = null;
         try {
@@ -438,7 +442,7 @@ public class HyperswitchPaymentPluginApi extends
         } catch (SQLException e) {
             logger.error("[refundPayment]  but we encountered a database error", e);
             return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
-                    TransactionType.REFUND, "[refundPayment] but we encountered a database error");
+                TransactionType.REFUND, "[refundPayment] but we encountered a database error");
         }
         PaymentPluginStatus paymentPluginStatus = null;
         RefundRequest refundRequest = new RefundRequest();
@@ -452,9 +456,9 @@ public class HyperswitchPaymentPluginApi extends
             paymentPluginStatus = convertRefundStatus(response.getStatus());
             try {
                 hyperswitchRecord = this.hyperswitchDao.addResponse(
-                        kbAccountId,
-                        kbPaymentMethodId, kbPaymentMethodId, TransactionType.REFUND, amount, currency, response,
-                        DateTime.now(), context.getTenantId());
+                    kbAccountId,
+                    kbPaymentMethodId, kbPaymentMethodId, TransactionType.REFUND, amount, currency, response,
+                    DateTime.now(), context.getTenantId());
             } catch (final SQLException e) {
                 throw new PaymentPluginApiException("Unable to refresh payment", e);
             }
@@ -465,20 +469,20 @@ public class HyperswitchPaymentPluginApi extends
         }
 
         return new HyperswitchPaymentTransactionInfoPlugin(
-                hyperswitchRecord,
-                kbPaymentId,
-                kbTransactionId,
-                TransactionType.REFUND,
-                amount,
-                currency,
-                paymentPluginStatus,
-                response.getErrorMessage(),
-                response.getErrorCode(),
-                response.getPaymentId(),
-                null,
-                DateTime.now(),
-                DateTime.now(),
-                null);
+            hyperswitchRecord,
+            kbPaymentId,
+            kbTransactionId,
+            TransactionType.REFUND,
+            amount,
+            currency,
+            paymentPluginStatus,
+            response.getErrorMessage(),
+            response.getErrorCode(),
+            response.getPaymentId(),
+            null,
+            DateTime.now(),
+            DateTime.now(),
+            null);
     }
 
     @Override
@@ -531,96 +535,104 @@ public class HyperswitchPaymentPluginApi extends
 
     @Override
     public Pagination<PaymentTransactionInfoPlugin> searchPayments(final String searchKey, final Long offset,
-            final Long limit, final Iterable<PluginProperty> properties, final TenantContext context)
-            throws PaymentPluginApiException {
+                                                                   final Long limit, final Iterable<PluginProperty> properties, final TenantContext context)
+        throws PaymentPluginApiException {
         return null;
     }
 
     @Override
-    public void addPaymentMethod(final UUID kbAccountId, final UUID kbPaymentMethodId,
-            final PaymentMethodPlugin paymentMethodProps, final boolean setDefault,
-            final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
-        logger.info("[addPaymentMethod] Adding Payment Method");
-        final Map<String, String> allProperties = PluginProperties.toStringMap(paymentMethodProps.getProperties(),
-                properties);
-        String paymentMethodIdInHs = allProperties.get("mandateId");
-        if (allProperties.containsKey("mandateId")) {
-            try {
-                this.hyperswitchDao.addPaymentMethod(
-                        kbAccountId,
-                        kbPaymentMethodId,
-                        allProperties,
-                        paymentMethodIdInHs,
-                        context.getTenantId());
-            } catch (SQLException e) {
-                throw new PaymentPluginApiException("Error calling Hyperswitch while adding payment method", e);
-            }
-        }
+    public void addPaymentMethod(final UUID kbAccountId,
+                                 final UUID kbPaymentMethodId,
+                                 final PaymentMethodPlugin paymentMethodProps,
+                                 final boolean setDefault,
+                                 final Iterable<PluginProperty> properties,
+                                 final CallContext context) throws PaymentPluginApiException {
 
+        logger.info("[addPaymentMethod] Creating empty payment method record for {}", kbPaymentMethodId);
+
+        try {
+            // Create empty record - mandate will be added after successful authorization
+            this.hyperswitchDao.addPaymentMethod(kbAccountId, kbPaymentMethodId);
+        } catch (SQLException e) {
+            throw new PaymentPluginApiException("Error creating payment method record", e);
+        }
     }
 
     @Override
-    public void deletePaymentMethod(final UUID kbAccountId, final UUID kbPaymentMethodId,
-            final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
-        try {
-            // Mark as deleted in our table
-            hyperswitchDao.deletePaymentMethod(kbPaymentMethodId, context.getTenantId());
+    public void deletePaymentMethod(final UUID kbAccountId,
+                                    final UUID kbPaymentMethodId,
+                                    final Iterable<PluginProperty> properties,
+                                    final CallContext context) throws PaymentPluginApiException {
 
-            // Get the payment method record to find the payment method ID
-            final HyperswitchPaymentMethodsRecord record = hyperswitchDao.getPaymentMethod(kbPaymentMethodId.toString());
-            if (record != null && record.getHyperswitchId() != null) {
-                // Delete payment method in Hyperswitch
+        try {
+            // Get payment method to check if there's a mandate to delete
+            HyperswitchPaymentMethodsRecord paymentMethod = hyperswitchDao.getPaymentMethod(kbPaymentMethodId.toString());
+
+            if (paymentMethod != null && paymentMethod.getHyperswitchId() != null) {
+                // Delete mandate in Hyperswitch if it exists
                 PaymentMethodsApi clientApi = buildHyperswitchPaymentMethodsClient(context);
                 try {
-                    clientApi.deleteAPaymentMethod(record.getHyperswitchId());
+                    clientApi.deleteAPaymentMethod(paymentMethod.getHyperswitchId());
                 } catch (BadRequest e) {
-                    String responseBody = e.contentUTF8();
-                    throw new PaymentPluginApiException("Failed to delete payment method in Hyperswitch: " + responseBody, e);
+                    logger.warn("Failed to delete mandate in Hyperswitch: {}", e.contentUTF8());
                 }
             }
+
+            // Delete our record
+            hyperswitchDao.deletePaymentMethod(kbPaymentMethodId, context.getTenantId());
+
         } catch (SQLException e) {
             throw new PaymentPluginApiException("Failed to delete payment method", e);
         }
     }
 
     @Override
-    public PaymentMethodPlugin getPaymentMethodDetail(final UUID kbAccountId, final UUID kbPaymentMethodId,
-            final Iterable<PluginProperty> properties, final TenantContext context) throws PaymentPluginApiException {
-        return null;
+    public PaymentMethodPlugin getPaymentMethodDetail(final UUID kbAccountId,
+                                                      final UUID kbPaymentMethodId,
+                                                      final Iterable<PluginProperty> properties,
+                                                      final TenantContext context) throws PaymentPluginApiException {
+        try {
+            final HyperswitchPaymentMethodsRecord record = this.hyperswitchDao.getPaymentMethod(kbPaymentMethodId.toString());
+            if (record == null) {
+                return null;
+            }
+            return buildPaymentMethodPlugin(record);
+        } catch (SQLException e) {
+            throw new PaymentPluginApiException("Failed to retrieve payment method", e);
+        }
     }
 
     @Override
     public void setDefaultPaymentMethod(final UUID kbAccountId, final UUID kbPaymentMethodId,
-            final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
+                                        final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
 
     }
 
     @Override
     public List<PaymentMethodInfoPlugin> getPaymentMethods(final UUID kbAccountId, final boolean refreshFromGateway,
-            final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
+                                                           final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
         return null;
     }
 
     @Override
     public Pagination<PaymentMethodPlugin> searchPaymentMethods(final String searchKey, final Long offset,
-            final Long limit, final Iterable<PluginProperty> properties, final TenantContext context)
-            throws PaymentPluginApiException {
+                                                                final Long limit, final Iterable<PluginProperty> properties, final TenantContext context)
+        throws PaymentPluginApiException {
         return null;
     }
 
     @Override
     public void resetPaymentMethods(final UUID kbAccountId, final List<PaymentMethodInfoPlugin> paymentMethods,
-            final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
+                                    final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
 
     }
 
     @Override
     public HostedPaymentPageFormDescriptor buildFormDescriptor(final UUID kbAccountId,
-            final Iterable<PluginProperty> customFields, final Iterable<PluginProperty> properties,
-            final CallContext context) throws PaymentPluginApiException {
+                                                               final Iterable<PluginProperty> customFields, final Iterable<PluginProperty> properties,
+                                                               final CallContext context) throws PaymentPluginApiException {
         return null;
     }
-
 
     private PaymentPluginStatus convertPaymentStatus(IntentStatus paymentStatus) {
         switch (paymentStatus) {
@@ -660,7 +672,7 @@ public class HyperswitchPaymentPluginApi extends
     }
 
     private com.hyperswitch.client.model.Currency convertCurrency(
-            Currency currency) {
+        Currency currency) {
         switch (currency) {
             case USD:
                 return com.hyperswitch.client.model.Currency.USD;
@@ -686,14 +698,21 @@ public class HyperswitchPaymentPluginApi extends
 
     @Override
     protected PaymentTransactionInfoPlugin buildPaymentTransactionInfoPlugin(
-            final HyperswitchResponsesRecord hyperswitchRecord) {
+        final HyperswitchResponsesRecord hyperswitchRecord) {
         return HyperswitchPaymentTransactionInfoPlugin.build(hyperswitchRecord);
     }
 
     @Override
     protected PaymentMethodPlugin buildPaymentMethodPlugin(HyperswitchPaymentMethodsRecord record) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'buildPaymentMethodPlugin'");
+        List<PluginProperty> properties = new ArrayList<>();
+        if (record.getHyperswitchId() != null) {
+            properties.add(new PluginProperty("mandate_id", record.getHyperswitchId(), false));
+        }
+
+        return new PluginPaymentMethodPlugin(
+            UUID.fromString(record.getKbPaymentMethodId()),
+            properties
+        );
     }
 
     @Override
@@ -710,7 +729,7 @@ public class HyperswitchPaymentPluginApi extends
 
     private <T extends Api> T buildHyperswitchClient(final TenantContext tenantContext, final Class<T> apiClass) {
         final HyperswitchConfigProperties config = hyperswitchConfigurationHandler
-                .getConfigurable(tenantContext.getTenantId());
+            .getConfigurable(tenantContext.getTenantId());
         if (config == null || config.getHSApiKey() == null || config.getHSApiKey().isEmpty()) {
             logger.warn("Per-tenant properties not configured");
             return null;
@@ -732,8 +751,9 @@ public class HyperswitchPaymentPluginApi extends
     }
 
     @Override
-    public GatewayNotification processNotification(final String notification, final Iterable<PluginProperty> properties,
-            final CallContext context) throws PaymentPluginApiException {
+    public GatewayNotification processNotification(final String notification,
+                                                   final Iterable<PluginProperty> properties,
+                                                   final CallContext context) throws PaymentPluginApiException {
         try {
             final JsonNode event = objectMapper.readTree(notification);
             final String eventId = event.path("event_id").asText();
@@ -749,7 +769,7 @@ public class HyperswitchPaymentPluginApi extends
                 return null;
             }
 
-            // Find the payment record using the payment ID
+            // Find the payment record
             final HyperswitchResponsesRecord response = this.hyperswitchDao.getSuccessfulResponse(
                 UUID.fromString(paymentId), context.getTenantId());
 
@@ -763,7 +783,7 @@ public class HyperswitchPaymentPluginApi extends
                 UUID.fromString(response.getKbAccountId()),
                 UUID.fromString(response.getKbPaymentId()),
                 UUID.fromString(response.getKbPaymentTransactionId()),
-                event.path("event_id").asText(),
+                eventId,
                 eventType,
                 paymentId,
                 status,
@@ -771,6 +791,24 @@ public class HyperswitchPaymentPluginApi extends
                 errorMessage,
                 notification,
                 context.getTenantId());
+
+            // Handle mandate for successful payments
+            if ("payment_intent.succeeded".equals(eventType)) {
+                String mandateId = event.path("data").path("mandate_id").asText();
+                if (mandateId != null && !mandateId.isEmpty()) {
+                    // Update payment method properties with mandate
+                    List<PluginProperty> updatedProperties = new ArrayList<>();
+                    updatedProperties.add(new PluginProperty("mandate_id", mandateId, false));
+                    updatedProperties.add(new PluginProperty("mandate_created_at", DateTime.now().toString(), false));
+
+                    killbillAPI.getPaymentApi().updatePaymentMethodPlugin(
+                        response.getKbAccountId(),
+                        UUID.fromString(response.getKbPaymentId()),
+                        updatedProperties,
+                        context
+                                                                         );
+                }
+            }
 
             // Update payment status
             final Map<String, Object> additionalData = new HashMap<>();
@@ -791,22 +829,22 @@ public class HyperswitchPaymentPluginApi extends
     }
 
     public PaymentTransactionInfoPlugin refundValidations( // Validate this function with currency unit of amount
-            HyperswitchResponsesRecord hyperswitchRecord, BigDecimal amount) {
+                                                           HyperswitchResponsesRecord hyperswitchRecord, BigDecimal amount) {
         if (hyperswitchRecord == null) {
             logger.error("[refundPayment] Purchase do not exists");
             return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
-                    TransactionType.REFUND, "Purchase do not exists");
+                TransactionType.REFUND, "Purchase do not exists");
         }
 
         if (hyperswitchRecord.getAmount().compareTo(amount) < 0) {
             logger.error("[refundPayment] The refund amount is more than the transaction amount");
             return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
-                    TransactionType.REFUND, "The refund amount is more than the transaction amount");
+                TransactionType.REFUND, "The refund amount is more than the transaction amount");
         }
         if (BigDecimal.ZERO.compareTo(amount) == 0) {
             logger.error("[refundPayment] The refund amount can not be zero");
             return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
-                    TransactionType.REFUND, "The refund amount can not be zero");
+                TransactionType.REFUND, "The refund amount can not be zero");
         } else {
             return null;
         }
