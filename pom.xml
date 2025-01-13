@@ -115,6 +115,12 @@
             <artifactId>jooby</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq</artifactId>
+        </dependency>
+
+
         <!-- Hyperswitch client -->
         <dependency>
             <groupId>io.github.juspay.hyperswitch</groupId>
