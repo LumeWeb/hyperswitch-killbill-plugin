@@ -781,7 +781,7 @@ public class HyperswitchPaymentPluginApi extends
             if ("payment_intent.succeeded".equals(eventType)) {
                 String mandateId = event.path("data").path("mandate_id").asText();
                 if (mandateId != null && !mandateId.isEmpty()) {
-                    this.hyperswitchDao.updateMandateId( UUID.fromString(response.getKbPaymentId()), paymentId,  UUID.fromString(response.getKbTenantId()))
+                    this.hyperswitchDao.updateMandateId( UUID.fromString(response.getKbPaymentId()), paymentId,  UUID.fromString(response.getKbTenantId()));
                 }
             }
 
