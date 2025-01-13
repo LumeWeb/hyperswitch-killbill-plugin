@@ -20,6 +20,7 @@
 package org.killbill.billing.plugin.hyperswitch;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,7 +37,6 @@ import org.killbill.billing.payment.api.TransactionType;
 import org.killbill.billing.payment.plugin.api.GatewayNotification;
 import org.killbill.billing.payment.plugin.api.HostedPaymentPageFormDescriptor;
 import org.killbill.billing.payment.plugin.api.PaymentMethodInfoPlugin;
-import org.killbill.billing.payment.plugin.api.PaymentPluginApi;
 import org.killbill.billing.payment.plugin.api.PaymentPluginApiException;
 import org.killbill.billing.payment.plugin.api.PaymentPluginStatus;
 import org.killbill.billing.payment.plugin.api.PaymentTransactionInfoPlugin;
@@ -53,32 +53,28 @@ import org.killbill.billing.util.callcontext.CallContext;
 import org.killbill.billing.util.callcontext.TenantContext;
 import org.killbill.billing.util.entity.Pagination;
 import org.killbill.clock.Clock;
-
-import java.sql.SQLException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hyperswitch.client.ApiClient;
 import com.hyperswitch.client.ApiClient.Api;
 import com.hyperswitch.client.api.PaymentMethodsApi;
-import com.hyperswitch.client.model.ApiResponse;
-import com.hyperswitch.client.model.PaymentRetrieveBody;
-import feign.FeignException.BadRequest;
-
-import com.hyperswitch.client.ApiClient;
 import com.hyperswitch.client.api.PaymentsApi;
 import com.hyperswitch.client.api.RefundsApi;
+import com.hyperswitch.client.model.ApiResponse;
+import com.hyperswitch.client.model.CaptureMethod;
+import com.hyperswitch.client.model.IntentStatus;
+import com.hyperswitch.client.model.PaymentRetrieveBody;
+import com.hyperswitch.client.model.PaymentsCancelRequest;
+import com.hyperswitch.client.model.PaymentsCaptureRequest;
 import com.hyperswitch.client.model.PaymentsCreateRequest;
 import com.hyperswitch.client.model.PaymentsResponse;
 import com.hyperswitch.client.model.RefundRequest;
 import com.hyperswitch.client.model.RefundResponse;
 import com.hyperswitch.client.model.RefundStatus;
-import com.hyperswitch.client.model.CaptureMethod;
-import com.hyperswitch.client.model.IntentStatus;
-import com.hyperswitch.client.model.PaymentsCancelRequest;
-import com.hyperswitch.client.model.PaymentsCaptureRequest;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import feign.FeignException.BadRequest;
 
 //
 // A 'real' payment plugin would of course implement this interface.
