@@ -77,14 +77,18 @@ public class HyperswitchDao extends
     // Payment methods
 
     public void addPaymentMethod(final UUID kbPaymentMethodId,
+                                 final UUID kbAccountId,
                                  final UUID kbTenantId) throws SQLException {
         execute(dataSource.getConnection(),
                 conn -> DSL.using(conn, dialect, settings)
                            .insertInto(HYPERSWITCH_PAYMENT_METHODS,
+                                       HYPERSWITCH_PAYMENT_METHODS.KB_ACCOUNT_ID,
                                        HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID,
                                        HYPERSWITCH_PAYMENT_METHODS.KB_TENANT_ID,
                                        HYPERSWITCH_PAYMENT_METHODS.CREATED_DATE)
-                           .values(kbPaymentMethodId.toString(),
+                           .values(
+                               kbTenantId.toString(),
+                               kbPaymentMethodId.toString(),
                                    kbTenantId.toString(),
                                    toLocalDateTime(clock.getUTCNow()))
                            .execute());

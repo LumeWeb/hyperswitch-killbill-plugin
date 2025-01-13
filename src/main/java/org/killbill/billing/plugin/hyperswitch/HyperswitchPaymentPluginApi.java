@@ -535,7 +535,7 @@ public class HyperswitchPaymentPluginApi extends
 
         try {
             // Create empty record - mandate will be added after successful authorization
-            this.hyperswitchDao.addPaymentMethod(kbAccountId, kbPaymentMethodId);
+            this.hyperswitchDao.addPaymentMethod(null, kbAccountId, context.getTenantId());
         } catch (SQLException e) {
             throw new PaymentPluginApiException("Error creating payment method record", e);
         }
