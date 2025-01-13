@@ -175,23 +175,6 @@ public class HyperswitchPaymentPluginApi extends
         }
     }
 
-    private PaymentsCreateRequest buildPaymentRequest(UUID kbAccountId,
-                                                      BigDecimal amount,
-                                                      Currency currency,
-                                                      String mandateId,
-                                                      UUID tenantId) {
-        PaymentsCreateRequest request = new PaymentsCreateRequest();
-        request.setAmount(KillBillMoney.toMinorUnits(currency.toString(), amount));
-        request.setCurrency(convertCurrency(currency));
-        request.confirm(true);
-        request.customerId(kbAccountId.toString());
-        request.offSession(true);
-        request.profileId(hyperswitchConfigurationHandler.getConfigurable(tenantId).getProfileId());
-        request.setCaptureMethod(CaptureMethod.MANUAL);
-        request.setMandateId(mandateId);
-        return request;
-    }
-
     private PaymentsResponse executePayment(PaymentsApi clientApi, PaymentsCreateRequest request)
         throws PaymentPluginApiException {
         try {
@@ -711,6 +694,8 @@ public class HyperswitchPaymentPluginApi extends
 
         return new PluginPaymentMethodPlugin(
             UUID.fromString(record.getKbPaymentMethodId()),
+            record.getHyperswitchId(),
+            record.getIsDefault()
             properties
         );
     }
