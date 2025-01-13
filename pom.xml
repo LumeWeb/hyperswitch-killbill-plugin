@@ -139,6 +139,12 @@
             <version>12.5</version>
         </dependency>
 
+        <!-- misc -->
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.kill-bill.billing.plugin.java</groupId>
