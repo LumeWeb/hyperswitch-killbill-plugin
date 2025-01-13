@@ -81,6 +81,16 @@
             <groupId>io.github.juspay.hyperswitch</groupId>
             <artifactId>hyperswitch-java-client</artifactId>
             <version>0.0.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.hyperswitch</groupId>
+                    <artifactId>java-client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>java-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.github.openfeign</groupId>
