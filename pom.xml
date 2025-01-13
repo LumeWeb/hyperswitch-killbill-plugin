@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.kill-bill.billing</groupId>
         <artifactId>killbill-oss-parent</artifactId>
-        <version>0.146.7</version>
+        <version>0.146.10</version>
     </parent>
     <groupId>io.github.juspay.hyperswitchplugin</groupId>
     <artifactId>hyperswitch-killbill-plugin</artifactId>
