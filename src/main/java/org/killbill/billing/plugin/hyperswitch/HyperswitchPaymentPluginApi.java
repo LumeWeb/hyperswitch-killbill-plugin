@@ -524,20 +524,21 @@ public class HyperswitchPaymentPluginApi extends
     }
 
     @Override
-    public void addPaymentMethod(final UUID kbAccountId,
-                                 final UUID kbPaymentMethodId,
-                                 final PaymentMethodPlugin paymentMethodProps,
-                                 final boolean setDefault,
-                                 final Iterable<PluginProperty> properties,
-                                 final CallContext context) throws PaymentPluginApiException {
-
-        logger.info("[addPaymentMethod] Creating empty payment method record for {}", kbPaymentMethodId);
-
+    public void addPaymentMethod(final UUID kbAccountId, final UUID kbPaymentMethodId,
+                                 final PaymentMethodPlugin paymentMethodProps, final boolean setDefault,
+                                 final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
+        logger.info("[addPaymentMethod] Adding Payment Method");
+        final Map<String, String> allProperties = PluginProperties.toStringMap(paymentMethodProps.getProperties(),
+                                                                               properties);
         try {
-            // Create empty record - mandate will be added after successful authorization
-            this.hyperswitchDao.addPaymentMethod(null, kbAccountId, context.getTenantId());
+            this.hyperswitchDao.addPaymentMethod(
+                kbAccountId,
+                kbPaymentMethodId,
+                allProperties,
+                null,
+                context.getTenantId());
         } catch (SQLException e) {
-            throw new PaymentPluginApiException("Error creating payment method record", e);
+            throw new PaymentPluginApiException("Error calling Hyperswitch while adding payment method", e);
         }
     }
 
@@ -781,7 +782,7 @@ public class HyperswitchPaymentPluginApi extends
             if ("payment_intent.succeeded".equals(eventType)) {
                 String mandateId = event.path("data").path("mandate_id").asText();
                 if (mandateId != null && !mandateId.isEmpty()) {
-                    this.hyperswitchDao.updateMandateId( UUID.fromString(response.getKbPaymentId()), paymentId,  UUID.fromString(response.getKbTenantId()));
+                    this.hyperswitchDao.updateMandateId(UUID.fromString(response.getKbPaymentId()), paymentId, UUID.fromString(response.getKbTenantId()));
                 }
             }
 

@@ -77,23 +77,38 @@ public class HyperswitchDao extends
 
     // Payment methods
 
-    public void addPaymentMethod(final UUID kbPaymentMethodId,
-                                 final UUID kbAccountId,
+    public void addPaymentMethod(final UUID kbAccountId,
+                                 final UUID kbPaymentMethodId,
+                                 final Map<String, String> additionalDataMap,
+                                 final String hyperswitchId,
                                  final UUID kbTenantId) throws SQLException {
         execute(dataSource.getConnection(),
-                conn -> DSL.using(conn, dialect, settings)
+                new WithConnectionCallback<HyperswitchResponsesRecord>() {
+                    @Override
+                    public HyperswitchResponsesRecord withConnection(final Connection conn) throws SQLException {
+                        System.out.println("Adding payment method");
+                        DSL.using(conn, dialect, settings)
                            .insertInto(HYPERSWITCH_PAYMENT_METHODS,
                                        HYPERSWITCH_PAYMENT_METHODS.KB_ACCOUNT_ID,
                                        HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID,
-                                       HYPERSWITCH_PAYMENT_METHODS.KB_TENANT_ID,
-                                       HYPERSWITCH_PAYMENT_METHODS.CREATED_DATE)
-                           .values(
-                               kbAccountId.toString(),
-                               kbPaymentMethodId.toString(),
-                               kbTenantId.toString(),
-                               toLocalDateTime(clock.getUTCNow()))
-                           .execute());
-    }
+                                       HYPERSWITCH_PAYMENT_METHODS.HYPERSWITCH_ID,
+                                       HYPERSWITCH_PAYMENT_METHODS.IS_DELETED,
+                                       HYPERSWITCH_PAYMENT_METHODS.ADDITIONAL_DATA,
+                                       HYPERSWITCH_PAYMENT_METHODS.CREATED_DATE,
+                                       HYPERSWITCH_PAYMENT_METHODS.UPDATED_DATE,
+                                       HYPERSWITCH_PAYMENT_METHODS.KB_TENANT_ID)
+                           .values(kbAccountId.toString(),
+                                   kbPaymentMethodId.toString(),
+                                   hyperswitchId,
+                                   (short) FALSE,
+                                   asString(additionalDataMap),
+                                   toLocalDateTime(new DateTime()),
+                                   toLocalDateTime(new DateTime()),
+                                   kbTenantId.toString())
+                           .execute();
+                        System.out.println("Added payment method successfully");
+                        return null;
+                    }
 
     public void updateMandateId(final UUID kbPaymentMethodId,
                                 final String mandateId,
