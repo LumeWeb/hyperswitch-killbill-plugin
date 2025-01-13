@@ -109,6 +109,8 @@ public class HyperswitchDao extends
                         System.out.println("Added payment method successfully");
                         return null;
                     }
+                });
+    }
 
     public void updateMandateId(final UUID kbPaymentMethodId,
                                 final String mandateId,
