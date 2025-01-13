@@ -781,17 +781,7 @@ public class HyperswitchPaymentPluginApi extends
             if ("payment_intent.succeeded".equals(eventType)) {
                 String mandateId = event.path("data").path("mandate_id").asText();
                 if (mandateId != null && !mandateId.isEmpty()) {
-                    // Update payment method properties with mandate
-                    List<PluginProperty> updatedProperties = new ArrayList<>();
-                    updatedProperties.add(new PluginProperty("mandate_id", mandateId, false));
-                    updatedProperties.add(new PluginProperty("mandate_created_at", DateTime.now().toString(), false));
-
-                    killbillAPI.getPaymentApi().updatePaymentMethodPlugin(
-                        response.getKbAccountId(),
-                        UUID.fromString(response.getKbPaymentId()),
-                        updatedProperties,
-                        context
-                                                                         );
+                    this.hyperswitchDao.updateMandateId( UUID.fromString(response.getKbPaymentId()), paymentId,  UUID.fromString(response.getKbTenantId()))
                 }
             }
 
