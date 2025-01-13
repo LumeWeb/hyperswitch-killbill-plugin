@@ -695,7 +695,7 @@ public class HyperswitchPaymentPluginApi extends
         return new PluginPaymentMethodPlugin(
             UUID.fromString(record.getKbPaymentMethodId()),
             record.getHyperswitchId(),
-            record.getIsDefault()
+            record.getIsDefault() == 1,
             properties
         );
     }
