@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import feign.Feign;
+import feign.RequestInterceptor;
 import org.joda.time.DateTime;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.osgi.libs.killbill.OSGIConfigPropertiesService;
@@ -715,7 +717,22 @@ public class HyperswitchPaymentPluginApi extends
             logger.warn("Per-tenant properties not configured");
             return null;
         }
-        final ApiClient apiClient = new ApiClient("api_key", config.getHSApiKey());
+
+        // Create ApiClient
+        ApiClient apiClient = new ApiClient("api_key", config.getHSApiKey());
+
+        // Add interceptor to ensure Content-Type is set for GET with body
+        RequestInterceptor getBodyInterceptor = template -> {
+            if (template.method().equals("GET") && template.body() != null) {
+                template.header("Content-Type", "application/json");
+            }
+        };
+
+        // Set up Feign builder with the interceptor
+        Feign.Builder feignBuilder = apiClient.getFeignBuilder()
+            .requestInterceptor(getBodyInterceptor);
+
+        apiClient.setFeignBuilder(feignBuilder);
         return apiClient.buildClient(apiClass);
     }
 
