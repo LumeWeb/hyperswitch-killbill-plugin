@@ -117,7 +117,12 @@ public class HyperswitchPaymentPluginApi extends
 
             // Call Hyperswitch API
             PaymentsApi clientApi = buildHyperswitchClient(context);
-            PaymentsResponse response = executePayment(clientApi, paymentsCreateRequest);
+            PaymentsResponse response;
+            try {
+                response = clientApi.createAPayment(paymentsCreateRequest);
+            } catch (com.hyperswitch.client.ApiException e) {
+                throw new PaymentPluginApiException("Payment execution failed: " + e.getMessage(), e);
+            }
 
             // Process response
             PaymentPluginStatus paymentPluginStatus = convertPaymentStatus(response.getStatus());
@@ -166,14 +171,6 @@ public class HyperswitchPaymentPluginApi extends
         }
     }
 
-    private PaymentsResponse executePayment(PaymentsApi clientApi, PaymentsCreateRequest request)
-        throws PaymentPluginApiException {
-        try {
-            return clientApi.createAPayment(request);
-        } catch (com.hyperswitch.client.ApiException e) {
-            throw new PaymentPluginApiException("Payment execution failed: " + e.getMessage(), e);
-        }
-    }
 
     private HyperswitchResponsesRecord storePaymentResponse(UUID kbAccountId,
                                                             UUID kbPaymentId,
