@@ -82,6 +82,9 @@ public class HyperswitchPaymentPluginApi extends
     private final HyperswitchConfigurationHandler hyperswitchConfigurationHandler;
     private final HyperswitchDao hyperswitchDao;
     private final ObjectMapper objectMapper;
+    
+    // Cache map structure: tenantId -> apiClass -> client instance
+    private final Map<UUID, Map<Class<?>, Object>> clientCache = new HashMap<>();
 
     public HyperswitchPaymentPluginApi(
         final HyperswitchConfigurationHandler hyperswitchConfigPropertiesConfigurationHandler,
@@ -691,25 +694,52 @@ public class HyperswitchPaymentPluginApi extends
         throw new UnsupportedOperationException("Unimplemented method 'getPaymentMethodId'");
     }
 
-    private <T> T buildHyperswitchClient(final TenantContext tenantContext, final Class<T> apiClass) {
-        final HyperswitchConfigProperties config = hyperswitchConfigurationHandler
-            .getConfigurable(tenantContext.getTenantId());
+    @SuppressWarnings("unchecked")
+    private synchronized <T> T buildHyperswitchClient(final TenantContext tenantContext, final Class<T> apiClass) {
+        UUID tenantId = tenantContext.getTenantId();
+        
+        // Check cache first
+        Map<Class<?>, Object> tenantClients = clientCache.get(tenantId);
+        if (tenantClients != null) {
+            T cachedClient = (T) tenantClients.get(apiClass);
+            if (cachedClient != null) {
+                return cachedClient;
+            }
+        }
+
+        // Get config
+        final HyperswitchConfigProperties config = hyperswitchConfigurationHandler.getConfigurable(tenantId);
         if (config == null || config.getHSApiKey() == null || config.getHSApiKey().isEmpty()) {
             logger.warn("Per-tenant properties not configured");
             return null;
         }
 
-        // Create ApiClient
-        com.hyperswitch.client.ApiClient apiClient = new com.hyperswitch.client.ApiClient();
-        apiClient.setApiKey(config.getHSApiKey());
-
-        // Create API instance
+        // Create new client
         try {
-            return apiClass.getConstructor(com.hyperswitch.client.ApiClient.class).newInstance(apiClient);
+            com.hyperswitch.client.ApiClient apiClient = new com.hyperswitch.client.ApiClient();
+            apiClient.setApiKey(config.getHSApiKey());
+            T newClient = apiClass.getConstructor(com.hyperswitch.client.ApiClient.class).newInstance(apiClient);
+
+            // Cache the new client
+            if (tenantClients == null) {
+                tenantClients = new HashMap<>();
+                clientCache.put(tenantId, tenantClients);
+            }
+            tenantClients.put(apiClass, newClient);
+
+            return newClient;
         } catch (Exception e) {
             logger.error("Failed to create API client", e);
             return null;
         }
+    }
+
+    private synchronized void clearClientCache(UUID tenantId) {
+        clientCache.remove(tenantId);
+    }
+
+    private synchronized void clearAllClientCaches() {
+        clientCache.clear();
     }
 
     private PaymentsApi buildHyperswitchClient(final TenantContext tenantContext) {
