@@ -74,7 +74,6 @@ import com.hyperswitch.client.model.PaymentsResponse;
 import com.hyperswitch.client.model.RefundRequest;
 import com.hyperswitch.client.model.RefundResponse;
 import com.hyperswitch.client.model.RefundStatus;
-import feign.FeignException.BadRequest;
 
 //
 // A 'real' payment plugin would of course implement this interface.
@@ -232,10 +231,8 @@ public class HyperswitchPaymentPluginApi extends
             } catch (final SQLException e) {
                 throw new PaymentPluginApiException("Unable to refresh payment", e);
             }
-        } catch (BadRequest e) {
-            String responseBody = e.contentUTF8();
-            String message = responseBody.toString();
-            throw new PaymentPluginApiException(message, e);
+        } catch (com.hyperswitch.client.ApiException e) {
+            throw new PaymentPluginApiException("Failed to capture payment: " + e.getMessage(), e);
         }
 
         return new HyperswitchPaymentTransactionInfoPlugin(
@@ -430,10 +427,8 @@ public class HyperswitchPaymentPluginApi extends
             } catch (final SQLException e) {
                 throw new PaymentPluginApiException("Unable to refresh payment", e);
             }
-        } catch (BadRequest e) {
-            String responseBody = e.contentUTF8();
-            String message = responseBody.toString();
-            throw new PaymentPluginApiException(message, e);
+        } catch (com.hyperswitch.client.ApiException e) {
+            throw new PaymentPluginApiException("Failed to process refund: " + e.getMessage(), e);
         }
 
         return new HyperswitchPaymentTransactionInfoPlugin(
@@ -491,9 +486,8 @@ public class HyperswitchPaymentPluginApi extends
                     }
 
                     wasRefreshed = true;
-                } catch (BadRequest e) {
-                    String responseBody = e.contentUTF8();
-                    throw new PaymentPluginApiException(responseBody, e);
+                } catch (com.hyperswitch.client.ApiException e) {
+                    throw new PaymentPluginApiException("Failed to retrieve payment info: " + e.getMessage(), e);
                 }
             }
         }
@@ -542,8 +536,8 @@ public class HyperswitchPaymentPluginApi extends
                 PaymentMethodsApi clientApi = buildHyperswitchPaymentMethodsClient(context);
                 try {
                     clientApi.deleteAPaymentMethod(paymentMethod.getHyperswitchId());
-                } catch (BadRequest e) {
-                    logger.warn("Failed to delete mandate in Hyperswitch: {}", e.contentUTF8());
+                } catch (com.hyperswitch.client.ApiException e) {
+                    logger.warn("Failed to delete mandate in Hyperswitch: {}", e.getMessage());
                 }
             }
 
