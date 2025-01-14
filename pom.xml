@@ -212,6 +212,7 @@
         <dependency>
             <groupId>org.kill-bill.commons</groupId>
             <artifactId>killbill-utils</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -241,6 +242,10 @@
                 <configuration>
                     <instructions>
                         <Bundle-Activator>org.killbill.billing.plugin.hyperswitch.HyperswitchActivator</Bundle-Activator>
+                        <Import-Package>
+                            org.killbill.commons.utils.collect,
+                            *
+                        </Import-Package>
                     </instructions>
                 </configuration>
             </plugin>
