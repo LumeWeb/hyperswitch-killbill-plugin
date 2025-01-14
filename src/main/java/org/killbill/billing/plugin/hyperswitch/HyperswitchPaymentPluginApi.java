@@ -83,7 +83,6 @@ public class HyperswitchPaymentPluginApi extends
                                          PluginPaymentPluginApi<HyperswitchResponsesRecord, HyperswitchResponses, HyperswitchPaymentMethodsRecord, HyperswitchPaymentMethods> {
 
     private static final Logger logger = LoggerFactory.getLogger(HyperswitchPaymentPluginApi.class);
-    private static String HS_API_KEY_PROPERTY = "HS_API_KEY_PROPERTY";
     private final HyperswitchConfigurationHandler hyperswitchConfigurationHandler;
     private final HyperswitchDao hyperswitchDao;
     private final ObjectMapper objectMapper;
