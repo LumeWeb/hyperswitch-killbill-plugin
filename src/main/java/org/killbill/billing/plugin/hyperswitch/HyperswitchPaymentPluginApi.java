@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import feign.Feign;
-import feign.RequestInterceptor;
 import org.joda.time.DateTime;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.osgi.libs.killbill.OSGIConfigPropertiesService;
@@ -176,8 +174,8 @@ public class HyperswitchPaymentPluginApi extends
         throws PaymentPluginApiException {
         try {
             return clientApi.createAPayment(request);
-        } catch (BadRequest e) {
-            throw new PaymentPluginApiException(e.contentUTF8(), e);
+        } catch (com.hyperswitch.client.ApiException e) {
+            throw new PaymentPluginApiException("Payment execution failed: " + e.getMessage(), e);
         }
     }
 
@@ -346,23 +344,14 @@ public class HyperswitchPaymentPluginApi extends
         PaymentsApi ClientApi = buildHyperswitchClient(context);
 
         try {
-            // Use cancelAPaymentWithHttpInfo to get the ApiResponse
-            ApiResponse<Void> response = ClientApi.cancelAPaymentWithHttpInfo(payment_id, paymentsRequest);
-
-            // Check status code for success (2xx range)
-            boolean isSuccess = response.getStatusCode() >= 200 && response.getStatusCode() < 300;
-            PaymentPluginStatus paymentPluginStatus = isSuccess ? PaymentPluginStatus.CANCELED : PaymentPluginStatus.ERROR;
+            ClientApi.cancelAPayment(payment_id, paymentsRequest);
+            
+            PaymentPluginStatus paymentPluginStatus = PaymentPluginStatus.CANCELED;
 
             // Create a PaymentsResponse object for database recording
             PaymentsResponse paymentsResponse = new PaymentsResponse();
             paymentsResponse.setPaymentId(payment_id);
-            paymentsResponse.setStatus(isSuccess ? IntentStatus.CANCELLED : IntentStatus.FAILED);
-
-            // Add error information if not successful
-            if (!isSuccess) {
-                paymentsResponse.setErrorCode(String.valueOf(response.getStatusCode()));
-                paymentsResponse.setErrorMessage("Void operation failed with status: " + response.getStatusCode());
-            }
+            paymentsResponse.setStatus(IntentStatus.CANCELLED);
 
             try {
                 hyperswitchRecord = this.hyperswitchDao.addResponse(
@@ -395,9 +384,8 @@ public class HyperswitchPaymentPluginApi extends
                 DateTime.now(),
                 null);
 
-        } catch (BadRequest e) {
-            String responseBody = e.contentUTF8();
-            throw new PaymentPluginApiException(responseBody, e);
+        } catch (com.hyperswitch.client.ApiException e) {
+            throw new PaymentPluginApiException("Void payment failed: " + e.getMessage(), e);
         }
     }
 
@@ -710,7 +698,7 @@ public class HyperswitchPaymentPluginApi extends
         throw new UnsupportedOperationException("Unimplemented method 'getPaymentMethodId'");
     }
 
-    private <T extends Api> T buildHyperswitchClient(final TenantContext tenantContext, final Class<T> apiClass) {
+    private <T> T buildHyperswitchClient(final TenantContext tenantContext, final Class<T> apiClass) {
         final HyperswitchConfigProperties config = hyperswitchConfigurationHandler
             .getConfigurable(tenantContext.getTenantId());
         if (config == null || config.getHSApiKey() == null || config.getHSApiKey().isEmpty()) {
@@ -719,21 +707,16 @@ public class HyperswitchPaymentPluginApi extends
         }
 
         // Create ApiClient
-        ApiClient apiClient = new ApiClient("api_key", config.getHSApiKey());
+        com.hyperswitch.client.ApiClient apiClient = new com.hyperswitch.client.ApiClient();
+        apiClient.setApiKey(config.getHSApiKey());
 
-        // Add interceptor to ensure Content-Type is set for GET with body
-        RequestInterceptor getBodyInterceptor = template -> {
-            if (template.method().equals("GET") && template.body() != null) {
-                template.header("Content-Type", "application/json");
-            }
-        };
-
-        // Set up Feign builder with the interceptor
-        Feign.Builder feignBuilder = apiClient.getFeignBuilder()
-            .requestInterceptor(getBodyInterceptor);
-
-        apiClient.setFeignBuilder(feignBuilder);
-        return apiClient.buildClient(apiClass);
+        // Create API instance
+        try {
+            return apiClass.getConstructor(com.hyperswitch.client.ApiClient.class).newInstance(apiClient);
+        } catch (Exception e) {
+            logger.error("Failed to create API client", e);
+            return null;
+        }
     }
 
     private PaymentsApi buildHyperswitchClient(final TenantContext tenantContext) {
