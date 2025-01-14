@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.hyperswitch.client.auth.ApiKeyAuth;
 import org.joda.time.DateTime;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.osgi.libs.killbill.OSGIConfigPropertiesService;
@@ -82,7 +83,7 @@ public class HyperswitchPaymentPluginApi extends
     private final HyperswitchConfigurationHandler hyperswitchConfigurationHandler;
     private final HyperswitchDao hyperswitchDao;
     private final ObjectMapper objectMapper;
-    
+
     // Cache map structure: tenantId -> apiClass -> client instance
     private final Map<UUID, Map<Class<?>, Object>> clientCache = new HashMap<>();
 
@@ -697,7 +698,7 @@ public class HyperswitchPaymentPluginApi extends
     @SuppressWarnings("unchecked")
     private synchronized <T> T buildHyperswitchClient(final TenantContext tenantContext, final Class<T> apiClass) {
         UUID tenantId = tenantContext.getTenantId();
-        
+
         // Check cache first
         Map<Class<?>, Object> tenantClients = clientCache.get(tenantId);
         if (tenantClients != null) {
@@ -717,7 +718,7 @@ public class HyperswitchPaymentPluginApi extends
         // Create new client
         try {
             com.hyperswitch.client.ApiClient apiClient = new com.hyperswitch.client.ApiClient();
-            apiClient.setApiKey(config.getHSApiKey());
+            ((ApiKeyAuth)apiClient.getAuthentication("api_key")).setApiKey(config.getHSApiKey());
             T newClient = apiClass.getConstructor(com.hyperswitch.client.ApiClient.class).newInstance(apiClient);
 
             // Cache the new client
