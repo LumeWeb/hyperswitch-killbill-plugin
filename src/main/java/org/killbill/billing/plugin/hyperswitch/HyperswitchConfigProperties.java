@@ -67,14 +67,14 @@ public class HyperswitchConfigProperties {
 
 	public String getEnvironment() {
 		if (environment == null || environment.isEmpty()) {
-			return getClient(HYPERSWITCH_PROFILE_ID, null);
+			return getClient(HYPERSWITCH_ENVIRONMENT_KEY, null);
 		}
 		return environment;
 	}
 
 	public String getProfileId(){
 		if (profileId == null || profileId.isEmpty()) {
-			return getClient(HYPERSWITCH_ENVIRONMENT_KEY, null);
+			return getClient(HYPERSWITCH_PROFILE_ID, null);
 		}
 		return profileId;
 	}
