@@ -341,7 +341,7 @@ public class HyperswitchPaymentPluginApi extends
 
         try {
             ClientApi.cancelAPayment(payment_id, paymentsRequest);
-            
+
             PaymentPluginStatus paymentPluginStatus = PaymentPluginStatus.CANCELED;
 
             // Create a PaymentsResponse object for database recording
@@ -796,8 +796,6 @@ public class HyperswitchPaymentPluginApi extends
             }
             return new HyperswitchGatewayNotification(UUID.fromString(response.getKbPaymentId()));
 
-        } catch (com.hyperswitch.client.ApiException e) {
-            throw new PaymentPluginApiException("API error processing notification: " + e.getMessage(), e);
         } catch (Exception e) {
             throw new PaymentPluginApiException("Error processing notification: " + e.getMessage(), e);
         }
