@@ -744,47 +744,56 @@ public class HyperswitchPaymentPluginApi extends
             }
 
             // Find the payment record
-            final HyperswitchResponsesRecord response = this.hyperswitchDao.getSuccessfulResponse(
-                UUID.fromString(paymentId), context.getTenantId());
+            final HyperswitchResponsesRecord response;
+            try {
+                response = this.hyperswitchDao.getSuccessfulResponse(
+                    UUID.fromString(paymentId), context.getTenantId());
 
-            if (response == null) {
-                logger.warn("Unable to find payment record for webhook notification: {}", paymentId);
-                return null;
-            }
-
-            // Store webhook event
-            this.hyperswitchDao.addWebhookEvent(
-                UUID.fromString(response.getKbAccountId()),
-                UUID.fromString(response.getKbPaymentId()),
-                UUID.fromString(response.getKbPaymentTransactionId()),
-                eventId,
-                eventType,
-                paymentId,
-                status,
-                errorCode,
-                errorMessage,
-                notification,
-                context.getTenantId());
-
-            // Handle mandate for successful payments
-            if ("payment_intent.succeeded".equals(eventType)) {
-                String mandateId = event.path("data").path("mandate_id").asText();
-                if (mandateId != null && !mandateId.isEmpty()) {
-                    this.hyperswitchDao.updateMandateId(UUID.fromString(response.getKbPaymentId()), paymentId, UUID.fromString(response.getKbTenantId()));
+                if (response == null) {
+                    logger.warn("Unable to find payment record for webhook notification: {}", paymentId);
+                    return null;
                 }
+            } catch (SQLException e) {
+                throw new PaymentPluginApiException("Database error while processing notification", e);
             }
 
-            // Update payment status
-            final Map<String, Object> additionalData = new HashMap<>();
-            additionalData.put("status", status);
-            if (errorCode != null) {
-                additionalData.put("error_code", errorCode);
-            }
-            if (errorMessage != null) {
-                additionalData.put("error_message", errorMessage);
-            }
+            try {
+                // Store webhook event
+                this.hyperswitchDao.addWebhookEvent(
+                    UUID.fromString(response.getKbAccountId()),
+                    UUID.fromString(response.getKbPaymentId()),
+                    UUID.fromString(response.getKbPaymentTransactionId()),
+                    eventId,
+                    eventType,
+                    paymentId,
+                    status,
+                    errorCode,
+                    errorMessage,
+                    notification,
+                    context.getTenantId());
 
-            this.hyperswitchDao.updateResponse(response, additionalData);
+                // Handle mandate for successful payments
+                if ("payment_intent.succeeded".equals(eventType)) {
+                    String mandateId = event.path("data").path("mandate_id").asText();
+                    if (mandateId != null && !mandateId.isEmpty()) {
+                        this.hyperswitchDao.updateMandateId(UUID.fromString(response.getKbPaymentId()), paymentId, UUID.fromString(response.getKbTenantId()));
+                    }
+                }
+
+                // Update payment status
+                final Map<String, Object> additionalData = new HashMap<>();
+                additionalData.put("status", status);
+                if (errorCode != null) {
+                    additionalData.put("error_code", errorCode);
+                }
+                if (errorMessage != null) {
+                    additionalData.put("error_message", errorMessage);
+                }
+
+                this.hyperswitchDao.updateResponse(response, additionalData);
+            } catch (SQLException e) {
+                throw new PaymentPluginApiException("Database error while processing notification", e);
+            }
             return new HyperswitchGatewayNotification(UUID.fromString(response.getKbPaymentId()));
 
         } catch (com.hyperswitch.client.ApiException e) {
