@@ -60,21 +60,21 @@ public class HyperswitchConfigProperties {
 
 	public String getHSApiKey() {
 		if (hyperswitchApikey == null || hyperswitchApikey.isEmpty()) {
-			return getClient(hyperswitchApikey, null);
+			return getClient(HYPERSWITCH_API_KEY, null);
 		}
 		return hyperswitchApikey;
 	}
 
 	public String getEnvironment() {
 		if (environment == null || environment.isEmpty()) {
-			return getClient(environment, null);
+			return getClient(HYPERSWITCH_PROFILE_ID, null);
 		}
 		return environment;
 	}
 
 	public String getProfileId(){
 		if (profileId == null || profileId.isEmpty()) {
-			return getClient(profileId, null);
+			return getClient(HYPERSWITCH_ENVIRONMENT_KEY, null);
 		}
 		return profileId;
 	}
