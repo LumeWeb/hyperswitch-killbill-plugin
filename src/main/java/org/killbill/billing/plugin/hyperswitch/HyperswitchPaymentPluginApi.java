@@ -277,7 +277,12 @@ public class HyperswitchPaymentPluginApi extends
 
             // Make API call
             PaymentsApi clientApi = buildHyperswitchClient(context);
-            PaymentsResponse response = clientApi.createAPayment(paymentsCreateRequest);
+            PaymentsResponse response;
+            try {
+                response = clientApi.createAPayment(paymentsCreateRequest);
+            } catch (com.hyperswitch.client.ApiException e) {
+                throw new PaymentPluginApiException("Failed to process purchase payment: " + e.getMessage(), e);
+            }
 
             // Process response
             PaymentPluginStatus paymentPluginStatus = convertPaymentStatus(response.getStatus());
