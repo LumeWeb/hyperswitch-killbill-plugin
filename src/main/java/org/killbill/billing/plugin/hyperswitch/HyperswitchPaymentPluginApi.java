@@ -58,12 +58,9 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hyperswitch.client.ApiClient;
-import com.hyperswitch.client.ApiClient.Api;
 import com.hyperswitch.client.api.PaymentMethodsApi;
 import com.hyperswitch.client.api.PaymentsApi;
 import com.hyperswitch.client.api.RefundsApi;
-import com.hyperswitch.client.model.ApiResponse;
 import com.hyperswitch.client.model.CaptureMethod;
 import com.hyperswitch.client.model.IntentStatus;
 import com.hyperswitch.client.model.PaymentRetrieveBody;
@@ -788,8 +785,10 @@ public class HyperswitchPaymentPluginApi extends
             this.hyperswitchDao.updateResponse(response, additionalData);
             return new HyperswitchGatewayNotification(UUID.fromString(response.getKbPaymentId()));
 
+        } catch (com.hyperswitch.client.ApiException e) {
+            throw new PaymentPluginApiException("API error processing notification: " + e.getMessage(), e);
         } catch (Exception e) {
-            throw new PaymentPluginApiException("Error processing notification", e);
+            throw new PaymentPluginApiException("Error processing notification: " + e.getMessage(), e);
         }
     }
 
