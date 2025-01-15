@@ -241,17 +241,22 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     }
 
     @Override
-    public Field<LocalDateTime> field8() {
-        return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.CREATED_DATE;
+    public Field<String> field8() {
+        return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.ADDITIONAL_DATA;
     }
 
     @Override
     public Field<LocalDateTime> field9() {
+        return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.CREATED_DATE;
+    }
+
+    @Override
+    public Field<LocalDateTime> field10() {
         return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.UPDATED_DATE;
     }
 
     @Override
-    public Field<String> field10() {
+    public Field<String> field11() {
         return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.KB_TENANT_ID;
     }
 
@@ -333,11 +338,6 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     @Override
     public Short value6() {
         return getIsDefault();
-    }
-
-    @Override
-    public Short value7() {
-        return getIsDeleted();
     }
 
     @Override
