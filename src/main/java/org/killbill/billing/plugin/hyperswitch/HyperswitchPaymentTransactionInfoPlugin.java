@@ -37,44 +37,45 @@ import com.google.common.base.Strings;
 
 public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransactionInfoPlugin {
 
-	public static HyperswitchPaymentTransactionInfoPlugin build(
-			final HyperswitchResponsesRecord hyperswitchResponsesRecord,
-			final HyperswitchPaymentMethodsRecord paymentMethodRecord) {
-		final Map<?, ?> additionalData = HyperswitchDao
-				.mapFromAdditionalDataString(hyperswitchResponsesRecord.getAdditionalData());
+    public static HyperswitchPaymentTransactionInfoPlugin build(
+        final HyperswitchResponsesRecord hyperswitchResponsesRecord,
+        final HyperswitchPaymentMethodsRecord paymentMethodRecord) {
+        final Map<String, Object> additionalData = HyperswitchDao
+            .mapFromAdditionalDataString(hyperswitchResponsesRecord.getAdditionalData());
 
-        List<PluginProperty> properties = new ArrayList<>();
+        // Create list of properties from additional data
+        List<PluginProperty> additionalDataProperties = PluginProperties.buildPluginProperties(additionalData);
+
+        // Create properties for payment method data
+        List<PluginProperty> paymentMethodProperties = new ArrayList<>();
         if (paymentMethodRecord != null && paymentMethodRecord.getClientSecret() != null) {
-            properties.add(new PluginProperty("client_secret", paymentMethodRecord.getClientSecret(), false));
-        } else {
-            // Fallback to additional data if payment method not found
-            final String clientSecret = (String) additionalData.get("client_secret");
-            if (clientSecret != null) {
-                properties.add(new PluginProperty("client_secret", clientSecret, false));
-            }
+            paymentMethodProperties.add(new PluginProperty("client_secret", paymentMethodRecord.getClientSecret(), false));
         }
 
-		final String firstPaymentReferenceId = hyperswitchResponsesRecord.getPaymentAttemptId();
+        // Merge all properties, with payment method properties taking precedence
+        Iterable<PluginProperty> mergedProperties = PluginProperties.merge(additionalDataProperties, paymentMethodProperties);
 
-		final DateTime responseDate = DateTime.now();
-		return new HyperswitchPaymentTransactionInfoPlugin(
-				hyperswitchResponsesRecord,
-				UUID.fromString(hyperswitchResponsesRecord.getKbPaymentId()),
-				UUID.fromString(hyperswitchResponsesRecord.getKbPaymentTransactionId()),
-				TransactionType.valueOf(hyperswitchResponsesRecord.getTransactionType()),
-				hyperswitchResponsesRecord.getAmount(),
-				Strings.isNullOrEmpty(hyperswitchResponsesRecord.getCurrency())
-						? null
-						: Currency.valueOf(hyperswitchResponsesRecord.getCurrency()),
-				getPaymentPluginStatus(additionalData),
+        final String firstPaymentReferenceId = hyperswitchResponsesRecord.getPaymentAttemptId();
+        final DateTime responseDate = DateTime.now();
+
+        return new HyperswitchPaymentTransactionInfoPlugin(
+            hyperswitchResponsesRecord,
+            UUID.fromString(hyperswitchResponsesRecord.getKbPaymentId()),
+            UUID.fromString(hyperswitchResponsesRecord.getKbPaymentTransactionId()),
+            TransactionType.valueOf(hyperswitchResponsesRecord.getTransactionType()),
+            hyperswitchResponsesRecord.getAmount(),
+            Strings.isNullOrEmpty(hyperswitchResponsesRecord.getCurrency())
+                ? null
+                : Currency.valueOf(hyperswitchResponsesRecord.getCurrency()),
+            getPaymentPluginStatus(additionalData),
             hyperswitchResponsesRecord.getErrorMessage(),
             hyperswitchResponsesRecord.getErrorCode(),
-				firstPaymentReferenceId,
-				null,
-				responseDate,
-				responseDate,
-				PluginProperties.buildPluginProperties(additionalData));
-	}
+            firstPaymentReferenceId,
+            null,
+            responseDate,
+            responseDate,
+            (List<PluginProperty>) mergedProperties);
+    }
 
 	public HyperswitchPaymentTransactionInfoPlugin(final HyperswitchResponsesRecord hyperswitchResponsesRecord,
 			UUID kbPaymentId, UUID kbTransactionPaymentPaymentId,
