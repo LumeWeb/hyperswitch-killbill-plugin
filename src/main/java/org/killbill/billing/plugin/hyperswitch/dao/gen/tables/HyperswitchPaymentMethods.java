@@ -194,7 +194,7 @@ public class HyperswitchPaymentMethods extends TableImpl<HyperswitchPaymentMetho
     // -------------------------------------------------------------------------
 
     @Override
-    public Row10<ULong, String, String, String, Short, Short, String, LocalDateTime, LocalDateTime, String> fieldsRow() {
-        return (Row10) super.fieldsRow();
+    public Row11<ULong, String, String, String, String, Short, Short, String, LocalDateTime, LocalDateTime, String> fieldsRow() {
+        return (Row11) super.fieldsRow();
     }
 }
