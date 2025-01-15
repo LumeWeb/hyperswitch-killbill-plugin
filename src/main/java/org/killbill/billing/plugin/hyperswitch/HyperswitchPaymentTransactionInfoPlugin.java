@@ -52,12 +52,12 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
 
 		final DateTime responseDate = DateTime.now();
 		return new HyperswitchPaymentTransactionInfoPlugin(
-				HyperswitchResponsesRecord,
-				UUID.fromString(HyperswitchResponsesRecord.getKbPaymentId()),
-				UUID.fromString(HyperswitchResponsesRecord.getKbPaymentTransactionId()),
-				TransactionType.valueOf(HyperswitchResponsesRecord.getTransactionType()),
-				HyperswitchResponsesRecord.getAmount(),
-				Strings.isNullOrEmpty(HyperswitchResponsesRecord.getCurrency())
+				hyperswitchResponsesRecord,
+				UUID.fromString(hyperswitchResponsesRecord.getKbPaymentId()),
+				UUID.fromString(hyperswitchResponsesRecord.getKbPaymentTransactionId()),
+				TransactionType.valueOf(hyperswitchResponsesRecord.getTransactionType()),
+				hyperswitchResponsesRecord.getAmount(),
+				Strings.isNullOrEmpty(hyperswitchResponsesRecord.getCurrency())
 						? null
 						: Currency.valueOf(HyperswitchResponsesRecord.getCurrency()),
 				getPaymentPluginStatus(additionalData),
