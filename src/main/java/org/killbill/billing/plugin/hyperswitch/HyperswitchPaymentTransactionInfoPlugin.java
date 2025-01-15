@@ -16,6 +16,7 @@
 package org.killbill.billing.plugin.hyperswitch;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
@@ -102,7 +103,7 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
         final String status = (String) additionalData.get("status");
         if ("succeeded".equals(status) || "requires_capture".equals(status)) {
             return PaymentPluginStatus.PROCESSED;
-        } else if ("processing".equals(status) || 
+        } else if ("processing".equals(status) ||
                    "requires_payment_method".equals(status) ||
                    "requires_confirmation".equals(status) ||
                    "requires_customer_action".equals(status)) {
