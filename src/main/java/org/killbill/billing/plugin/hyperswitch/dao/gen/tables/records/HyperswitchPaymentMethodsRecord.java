@@ -276,32 +276,37 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     }
 
     @Override
-    public Short component5() {
-        return getIsDefault();
+    public String component5() {
+        return getClientSecret();
     }
 
     @Override
     public Short component6() {
+        return getIsDefault();
+    }
+
+    @Override
+    public Short component7() {
         return getIsDeleted();
     }
 
     @Override
-    public String component7() {
+    public String component8() {
         return getAdditionalData();
     }
 
     @Override
-    public LocalDateTime component8() {
+    public LocalDateTime component9() {
         return getCreatedDate();
     }
 
     @Override
-    public LocalDateTime component9() {
+    public LocalDateTime component10() {
         return getUpdatedDate();
     }
 
     @Override
-    public String component10() {
+    public String component11() {
         return getKbTenantId();
     }
 
