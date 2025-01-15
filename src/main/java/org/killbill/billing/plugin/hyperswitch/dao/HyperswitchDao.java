@@ -170,6 +170,7 @@ public class HyperswitchDao extends
     public HyperswitchResponsesRecord addResponse(final UUID kbAccountId,
                                                   final UUID kbPaymentId,
                                                   final UUID kbPaymentTransactionId,
+                                                  final UUID kbPaymentMethodId,
                                                   final TransactionType transactionType,
                                                   final BigDecimal amount,
                                                   final Currency currency,
