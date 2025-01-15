@@ -48,7 +48,7 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
             properties.add(new PluginProperty("client_secret", paymentMethodRecord.getClientSecret(), false));
         }
 
-		final String firstPaymentReferenceId = HyperswitchResponsesRecord.getPaymentAttemptId();
+		final String firstPaymentReferenceId = hyperswitchResponsesRecord.getPaymentAttemptId();
 
 		final DateTime responseDate = DateTime.now();
 		return new HyperswitchPaymentTransactionInfoPlugin(
