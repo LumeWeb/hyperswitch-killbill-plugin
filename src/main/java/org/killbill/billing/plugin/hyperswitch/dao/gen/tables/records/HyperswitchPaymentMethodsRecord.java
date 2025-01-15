@@ -191,13 +191,13 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     // -------------------------------------------------------------------------
 
     @Override
-    public Row10<ULong, String, String, String, Short, Short, String, LocalDateTime, LocalDateTime, String> fieldsRow() {
-        return (Row10) super.fieldsRow();
+    public Row11<ULong, String, String, String, String, Short, Short, String, LocalDateTime, LocalDateTime, String> fieldsRow() {
+        return (Row11) super.fieldsRow();
     }
 
     @Override
-    public Row10<ULong, String, String, String, Short, Short, String, LocalDateTime, LocalDateTime, String> valuesRow() {
-        return (Row10) super.valuesRow();
+    public Row11<ULong, String, String, String, String, Short, Short, String, LocalDateTime, LocalDateTime, String> valuesRow() {
+        return (Row11) super.valuesRow();
     }
 
     @Override
@@ -221,7 +221,12 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     }
 
     @Override
-    public Field<Short> field5() {
+    public Field<String> field5() {
+        return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.CLIENT_SECRET;
+    }
+
+    @Override
+    public Field<Short> field6() {
         return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.IS_DEFAULT;
     }
 
@@ -320,8 +325,13 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
         return getHyperswitchId();
     }
 
+    @Override 
+    public String value5() {
+        return getClientSecret();
+    }
+
     @Override
-    public Short value5() {
+    public Short value6() {
         return getIsDefault();
     }
 
