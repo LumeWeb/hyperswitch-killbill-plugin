@@ -42,6 +42,7 @@ create table hyperswitch_responses (
 , kb_account_id char(36) not null
 , kb_payment_id char(36) not null
 , kb_payment_transaction_id char(36) not null
+, kb_payment_method_id char(36) not null
 , transaction_type varchar(32) not null
 , amount numeric(15,9)
 , currency char(3)
