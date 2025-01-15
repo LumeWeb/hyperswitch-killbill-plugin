@@ -22,7 +22,6 @@ create table hyperswitch_payment_methods (
   record_id serial
 , kb_account_id char(36) not null
 , kb_payment_method_id char(36) not null
-, kb_payment_id char(36) default null
 , hyperswitch_id varchar(255) not null
 , is_default smallint not null default 0
 , client_secret varchar(255) default null
@@ -33,9 +32,8 @@ create table hyperswitch_payment_methods (
 , kb_tenant_id char(36) not null
 , primary key(record_id)
 ) /*! CHARACTER SET utf8 COLLATE utf8_bin */;
-create unique index hyperswitch_payment_methods_kb_payment_id on hyperswitch_payment_methods(kb_payment_method_id);
+create unique index hyperswitch_payment_methods_kb_payment_method_id on hyperswitch_payment_methods(kb_payment_method_id);
 create index hyperswitch_payment_methods_hyperswitch_id on hyperswitch_payment_methods(hyperswitch_id);
-create index hyperswitch_payment_methods_kb_payment_id_idx on hyperswitch_payment_methods(kb_payment_id);
 
 
 drop table if exists hyperswitch_responses;
