@@ -402,31 +402,37 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     }
 
     @Override
-    public HyperswitchPaymentMethodsRecord value7(String value) {
+    public HyperswitchPaymentMethodsRecord value7(Short value) {
+        setIsDeleted(value);
+        return this;
+    }
+
+    @Override
+    public HyperswitchPaymentMethodsRecord value8(String value) {
         setAdditionalData(value);
         return this;
     }
 
     @Override
-    public HyperswitchPaymentMethodsRecord value8(LocalDateTime value) {
+    public HyperswitchPaymentMethodsRecord value9(LocalDateTime value) {
         setCreatedDate(value);
         return this;
     }
 
     @Override
-    public HyperswitchPaymentMethodsRecord value9(LocalDateTime value) {
+    public HyperswitchPaymentMethodsRecord value10(LocalDateTime value) {
         setUpdatedDate(value);
         return this;
     }
 
     @Override
-    public HyperswitchPaymentMethodsRecord value10(String value) {
+    public HyperswitchPaymentMethodsRecord value11(String value) {
         setKbTenantId(value);
         return this;
     }
 
     @Override
-    public HyperswitchPaymentMethodsRecord values(ULong value1, String value2, String value3, String value4, Short value5, Short value6, String value7, LocalDateTime value8, LocalDateTime value9, String value10) {
+    public HyperswitchPaymentMethodsRecord values(ULong value1, String value2, String value3, String value4, String value5, Short value6, Short value7, String value8, LocalDateTime value9, LocalDateTime value10, String value11) {
         value1(value1);
         value2(value2);
         value3(value3);
@@ -437,6 +443,7 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
         value8(value8);
         value9(value9);
         value10(value10);
+        value11(value11);
         return this;
     }
 
