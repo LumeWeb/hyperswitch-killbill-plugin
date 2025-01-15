@@ -138,12 +138,12 @@ public class HyperswitchResponsesRecord extends UpdatableRecordImpl<HyperswitchR
 
     /** Setter for <code>killbill.hyperswitch_responses.additional_data</code>. */
     public void setAdditionalData(String value) {
-        set(10, value);
+        set(11, value);
     }
 
     /** Getter for <code>killbill.hyperswitch_responses.additional_data</code>. */
     public String getAdditionalData() {
-        return (String) get(10);
+        return (String) get(11);
     }
 
     /** Setter for <code>killbill.hyperswitch_responses.created_date</code>. */
