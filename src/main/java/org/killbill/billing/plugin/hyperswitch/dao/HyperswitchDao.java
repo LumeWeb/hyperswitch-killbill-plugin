@@ -140,12 +140,14 @@ public class HyperswitchDao extends
 
     public HyperswitchPaymentMethodsRecord getPaymentMethodByPaymentId(final String kbPaymentId)
         throws SQLException {
-        // First get the response record to find the payment method ID
+        // Get the initial/first response record for this payment
         final HyperswitchResponsesRecord response = execute(dataSource.getConnection(),
             conn -> DSL.using(conn, dialect, settings)
-                      .selectFrom(HYPERSWITCH_RESPONSES)
-                      .where(HYPERSWITCH_RESPONSES.KB_PAYMENT_ID.equal(kbPaymentId))
-                      .fetchOne());
+                .selectFrom(HYPERSWITCH_RESPONSES)
+                .where(HYPERSWITCH_RESPONSES.KB_PAYMENT_ID.equal(kbPaymentId))
+                .orderBy(HYPERSWITCH_RESPONSES.CREATED_DATE.asc())
+                .limit(1)
+                .fetchOne());
 
         if (response == null) {
             return null;
@@ -154,9 +156,9 @@ public class HyperswitchDao extends
         // Then get the payment method record
         return execute(dataSource.getConnection(),
             conn -> DSL.using(conn, dialect, settings)
-                      .selectFrom(HYPERSWITCH_PAYMENT_METHODS)
-                      .where(HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID.equal(response.getKbPaymentMethodId()))
-                      .fetchOne());
+                .selectFrom(HYPERSWITCH_PAYMENT_METHODS)
+                .where(HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID.equal(response.getKbPaymentMethodId()))
+                .fetchOne());
     }
 
     public void deletePaymentMethod(final UUID kbPaymentMethodId,
