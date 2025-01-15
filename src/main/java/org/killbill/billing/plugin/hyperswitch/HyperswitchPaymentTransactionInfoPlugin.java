@@ -52,6 +52,10 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
             paymentMethodProperties.add(new PluginProperty("client_secret", paymentMethodRecord.getClientSecret(), false));
         }
 
+        // Add expires_at property (15 minutes from created_date)
+        DateTime expiresAt = new DateTime(hyperswitchResponsesRecord.getCreatedDate()).plusMinutes(15);
+        paymentMethodProperties.add(new PluginProperty("expires_at", expiresAt.toString(), false));
+
         // Merge all properties, with payment method properties taking precedence
         Iterable<PluginProperty> mergedProperties = PluginProperties.merge(additionalDataProperties, paymentMethodProperties);
 
