@@ -98,12 +98,12 @@ public class HyperswitchResponsesRecord extends UpdatableRecordImpl<HyperswitchR
 
     /** Setter for <code>killbill.hyperswitch_responses.currency</code>. */
     public void setCurrency(String value) {
-        set(6, value);
+        set(7, value);
     }
 
     /** Getter for <code>killbill.hyperswitch_responses.currency</code>. */
     public String getCurrency() {
-        return (String) get(6);
+        return (String) get(7);
     }
 
     /** Setter for <code>killbill.hyperswitch_responses.psp_reference</code>. */
