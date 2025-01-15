@@ -464,16 +464,16 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     public HyperswitchPaymentMethodsRecord(ULong recordId, String kbAccountId, String kbPaymentMethodId, String hyperswitchId, String clientSecret, Short isDefault, Short isDeleted, String additionalData, LocalDateTime createdDate, LocalDateTime updatedDate, String kbTenantId) {
         super(HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS);
 
-        set(0, recordId);
-        set(1, kbAccountId);
-        set(2, kbPaymentMethodId);
-        set(3, hyperswitchId);
-        set(4, isDefault);
-        set(5, clientSecret);
-        set(6, isDeleted);
-        set(7, additionalData);
-        set(8, createdDate);
-        set(9, updatedDate);
-        set(10, kbTenantId);
+        setRecordId(recordId);
+        setKbAccountId(kbAccountId);
+        setKbPaymentMethodId(kbPaymentMethodId);
+        setHyperswitchId(hyperswitchId);
+        setIsDefault(isDefault);
+        setClientSecret(clientSecret);
+        setIsDeleted(isDeleted);
+        setAdditionalData(additionalData);
+        setCreatedDate(createdDate);
+        setUpdatedDate(updatedDate);
+        setKbTenantId(kbTenantId);
     }
 }
