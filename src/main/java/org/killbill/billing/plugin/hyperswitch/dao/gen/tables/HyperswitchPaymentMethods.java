@@ -71,6 +71,11 @@ public class HyperswitchPaymentMethods extends TableImpl<HyperswitchPaymentMetho
     public final TableField<HyperswitchPaymentMethodsRecord, String> HYPERSWITCH_ID = createField(DSL.name("hyperswitch_id"), org.jooq.impl.SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
+     * The column <code>killbill.hyperswitch_payment_methods.client_secret</code>.
+     */
+    public final TableField<HyperswitchPaymentMethodsRecord, String> CLIENT_SECRET = createField(DSL.name("client_secret"), org.jooq.impl.SQLDataType.VARCHAR(255).defaultValue(DSL.inline("NULL", org.jooq.impl.SQLDataType.VARCHAR)), this, "");
+
+    /**
      * The column <code>killbill.hyperswitch_payment_methods.is_default</code>.
      */
     public final TableField<HyperswitchPaymentMethodsRecord, Short> IS_DEFAULT = createField(DSL.name("is_default"), org.jooq.impl.SQLDataType.SMALLINT.nullable(false).defaultValue(org.jooq.impl.DSL.inline("0", org.jooq.impl.SQLDataType.SMALLINT)), this, "");
