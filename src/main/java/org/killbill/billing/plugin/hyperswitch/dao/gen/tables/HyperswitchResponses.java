@@ -64,6 +64,10 @@ public class HyperswitchResponses extends TableImpl<HyperswitchResponsesRecord> 
     public final TableField<HyperswitchResponsesRecord, String> KB_PAYMENT_TRANSACTION_ID = createField(
             DSL.name("kb_payment_transaction_id"), SQLDataType.CHAR(36).nullable(false), this, "");
 
+    /** The column <code>killbill.hyperswitch_responses.kb_payment_method_id</code>. */
+    public final TableField<HyperswitchResponsesRecord, String> KB_PAYMENT_METHOD_ID = createField(
+            DSL.name("kb_payment_method_id"), SQLDataType.CHAR(36).nullable(false), this, "");
+
     /** The column <code>killbill.hyperswitch_responses.transaction_type</code>. */
     public final TableField<HyperswitchResponsesRecord, String> TRANSACTION_TYPE = createField(
             DSL.name("transaction_type"), SQLDataType.VARCHAR(32).nullable(false), this, "");

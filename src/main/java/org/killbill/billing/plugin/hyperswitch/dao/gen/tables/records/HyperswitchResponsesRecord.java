@@ -62,9 +62,23 @@ public class HyperswitchResponsesRecord extends UpdatableRecordImpl<HyperswitchR
         return (String) get(3);
     }
 
+    /**
+     * Setter for <code>killbill.hyperswitch_responses.kb_payment_method_id</code>.
+     */
+    public void setKbPaymentMethodId(String value) {
+        set(4, value);
+    }
+
+    /**
+     * Getter for <code>killbill.hyperswitch_responses.kb_payment_method_id</code>.
+     */
+    public String getKbPaymentMethodId() {
+        return (String) get(4);
+    }
+
     /** Setter for <code>killbill.hyperswitch_responses.transaction_type</code>. */
     public void setTransactionType(String value) {
-        set(4, value);
+        set(5, value);
     }
 
     /** Getter for <code>killbill.hyperswitch_responses.transaction_type</code>. */
