@@ -139,42 +139,42 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
      * Setter for <code>killbill.hyperswitch_payment_methods.created_date</code>.
      */
     public void setCreatedDate(LocalDateTime value) {
-        set(7, value);
+        set(8, value);
     }
 
     /**
      * Getter for <code>killbill.hyperswitch_payment_methods.created_date</code>.
      */
     public LocalDateTime getCreatedDate() {
-        return (LocalDateTime) get(7);
+        return (LocalDateTime) get(8);
     }
 
     /**
      * Setter for <code>killbill.hyperswitch_payment_methods.updated_date</code>.
      */
     public void setUpdatedDate(LocalDateTime value) {
-        set(8, value);
+        set(9, value);
     }
 
     /**
      * Getter for <code>killbill.hyperswitch_payment_methods.updated_date</code>.
      */
     public LocalDateTime getUpdatedDate() {
-        return (LocalDateTime) get(8);
+        return (LocalDateTime) get(9);
     }
 
     /**
      * Setter for <code>killbill.hyperswitch_payment_methods.kb_tenant_id</code>.
      */
     public void setKbTenantId(String value) {
-        set(9, value);
+        set(10, value);
     }
 
     /**
      * Getter for <code>killbill.hyperswitch_payment_methods.kb_tenant_id</code>.
      */
     public String getKbTenantId() {
-        return (String) get(9);
+        return (String) get(10);
     }
 
     // -------------------------------------------------------------------------
