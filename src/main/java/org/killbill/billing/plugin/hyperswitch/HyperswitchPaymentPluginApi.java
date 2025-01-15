@@ -277,7 +277,7 @@ public class HyperswitchPaymentPluginApi extends
             paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
             paymentsCreateRequest.customerId(kbAccountId.toString());
             paymentsCreateRequest.offSession(true);
-            paymentsCreateRequest.setMandateId(paymentMethod.getHyperswitchId());
+            paymentsCreateRequest.setPaymentMethodId(paymentMethod.getHyperswitchId());
 
             // Make API call
             PaymentsApi clientApi = buildHyperswitchClient(context);
@@ -676,7 +676,7 @@ public class HyperswitchPaymentPluginApi extends
     protected PaymentMethodPlugin buildPaymentMethodPlugin(HyperswitchPaymentMethodsRecord record) {
         List<PluginProperty> properties = new ArrayList<>();
         if (record.getHyperswitchId() != null) {
-            properties.add(new PluginProperty("mandate_id", record.getHyperswitchId(), false));
+            properties.add(new PluginProperty("payment_id", record.getHyperswitchId(), false));
         }
 
         return new PluginPaymentMethodPlugin(
@@ -809,9 +809,9 @@ public class HyperswitchPaymentPluginApi extends
 
                 // Handle mandate for successful payments
                 if ("payment_intent.succeeded".equals(eventType)) {
-                    String mandateId = event.path("data").path("mandate_id").asText();
-                    if (mandateId != null && !mandateId.isEmpty()) {
-                        this.hyperswitchDao.updateMandateId(UUID.fromString(response.getKbPaymentId()), paymentId, UUID.fromString(response.getKbTenantId()));
+                    String paymentMethodId = event.path("data").path("payment_id").asText();
+                    if (paymentMethodId != null && !paymentMethodId.isEmpty()) {
+                        this.hyperswitchDao.updateMandateId(UUID.fromString(response.getKbPaymentId()), paymentMethodId, UUID.fromString(response.getKbTenantId()));
                     }
                 }
 
