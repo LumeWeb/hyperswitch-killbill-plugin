@@ -106,34 +106,34 @@ public class HyperswitchResponsesRecord extends UpdatableRecordImpl<HyperswitchR
         return (String) get(7);
     }
 
-    /** Setter for <code>killbill.hyperswitch_responses.psp_reference</code>. */
+    /** Setter for <code>killbill.hyperswitch_responses.payment_attempt_id</code>. */
     public void setPaymentAttemptId(String value) {
-        set(7, value);
-    }
-
-    /** Getter for <code>killbill.hyperswitch_responses.psp_reference</code>. */
-    public String getPaymentAttemptId() {
-        return (String) get(7);
-    }
-
-    /** Setter for <code>killbill.hyperswitch_responses.result_code</code>. */
-    public void setErrorMessage(String value) {
         set(8, value);
     }
 
-    /** Getter for <code>killbill.hyperswitch_responses.result_code</code>. */
-    public String getErrorMessage() {
+    /** Getter for <code>killbill.hyperswitch_responses.payment_attempt_id</code>. */
+    public String getPaymentAttemptId() {
         return (String) get(8);
     }
 
-    /** Setter for <code>killbill.hyperswitch_responses.refusal_reason</code>. */
-    public void setErrorCode(String value) {
+    /** Setter for <code>killbill.hyperswitch_responses.error_message</code>. */
+    public void setErrorMessage(String value) {
         set(9, value);
     }
 
-    /** Getter for <code>killbill.hyperswitch_responses.refusal_reason</code>. */
-    public String getErrorCode() {
+    /** Getter for <code>killbill.hyperswitch_responses.error_message</code>. */
+    public String getErrorMessage() {
         return (String) get(9);
+    }
+
+    /** Setter for <code>killbill.hyperswitch_responses.error_code</code>. */
+    public void setErrorCode(String value) {
+        set(10, value);
+    }
+
+    /** Getter for <code>killbill.hyperswitch_responses.error_code</code>. */
+    public String getErrorCode() {
+        return (String) get(10);
     }
 
     /** Setter for <code>killbill.hyperswitch_responses.additional_data</code>. */
