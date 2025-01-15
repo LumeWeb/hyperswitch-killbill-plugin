@@ -81,6 +81,7 @@ public class HyperswitchDao extends
                                  final UUID kbPaymentMethodId,
                                  final Map<String, String> additionalDataMap,
                                  final String hyperswitchId,
+                                 final String clientSecret,
                                  final UUID kbTenantId) throws SQLException {
         execute(dataSource.getConnection(),
                 new WithConnectionCallback<HyperswitchResponsesRecord>() {
@@ -92,6 +93,7 @@ public class HyperswitchDao extends
                                        HYPERSWITCH_PAYMENT_METHODS.KB_ACCOUNT_ID,
                                        HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID,
                                        HYPERSWITCH_PAYMENT_METHODS.HYPERSWITCH_ID,
+                                       HYPERSWITCH_PAYMENT_METHODS.CLIENT_SECRET,
                                        HYPERSWITCH_PAYMENT_METHODS.IS_DELETED,
                                        HYPERSWITCH_PAYMENT_METHODS.ADDITIONAL_DATA,
                                        HYPERSWITCH_PAYMENT_METHODS.CREATED_DATE,
@@ -100,6 +102,7 @@ public class HyperswitchDao extends
                            .values(kbAccountId.toString(),
                                    kbPaymentMethodId.toString(),
                                    hyperswitchId,
+                                   clientSecret,
                                    (short) FALSE,
                                    asString(additionalDataMap),
                                    toLocalDateTime(new DateTime()),

@@ -40,9 +40,14 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
 		final Map<?, ?> additionalData = HyperswitchDao
 				.mapFromAdditionalDataString(HyperswitchResponsesRecord.getAdditionalData());
 
+        List<PluginProperty> properties = new ArrayList<>();
+        if (additionalData.containsKey("client_secret")) {
+            properties.add(new PluginProperty("client_secret", additionalData.get("client_secret"), false));
+        }
+
 		final String firstPaymentReferenceId = HyperswitchResponsesRecord.getPaymentAttemptId();
 
-		final DateTime responseDate =DateTime.now();
+		final DateTime responseDate = DateTime.now();
 		return new HyperswitchPaymentTransactionInfoPlugin(
 				HyperswitchResponsesRecord,
 				UUID.fromString(HyperswitchResponsesRecord.getKbPaymentId()),
