@@ -42,8 +42,9 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
 				.mapFromAdditionalDataString(HyperswitchResponsesRecord.getAdditionalData());
 
         List<PluginProperty> properties = new ArrayList<>();
-        if (additionalData.containsKey("client_secret")) {
-            properties.add(new PluginProperty("client_secret", additionalData.get("client_secret"), false));
+        // Client secret comes from payment methods table, not additional data
+        if (HyperswitchResponsesRecord.getClientSecret() != null) {
+            properties.add(new PluginProperty("client_secret", HyperswitchResponsesRecord.getClientSecret(), false));
         }
 
 		final String firstPaymentReferenceId = HyperswitchResponsesRecord.getPaymentAttemptId();
