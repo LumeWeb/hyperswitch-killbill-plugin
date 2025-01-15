@@ -241,11 +241,6 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     }
 
     @Override
-    public Field<String> field8() {
-        return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.ADDITIONAL_DATA;
-    }
-
-    @Override
     public Field<LocalDateTime> field9() {
         return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.CREATED_DATE;
     }
