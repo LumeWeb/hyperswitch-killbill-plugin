@@ -37,14 +37,14 @@ import com.google.common.base.Strings;
 public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransactionInfoPlugin {
 
 	public static HyperswitchPaymentTransactionInfoPlugin build(
-			final HyperswitchResponsesRecord HyperswitchResponsesRecord) {
+			final HyperswitchResponsesRecord hyperswitchResponsesRecord,
+			final HyperswitchPaymentMethodsRecord paymentMethodRecord) {
 		final Map<?, ?> additionalData = HyperswitchDao
-				.mapFromAdditionalDataString(HyperswitchResponsesRecord.getAdditionalData());
+				.mapFromAdditionalDataString(hyperswitchResponsesRecord.getAdditionalData());
 
         List<PluginProperty> properties = new ArrayList<>();
-        // Client secret comes from payment methods table, not additional data
-        if (HyperswitchResponsesRecord.getClientSecret() != null) {
-            properties.add(new PluginProperty("client_secret", HyperswitchResponsesRecord.getClientSecret(), false));
+        if (paymentMethodRecord != null && paymentMethodRecord.getClientSecret() != null) {
+            properties.add(new PluginProperty("client_secret", paymentMethodRecord.getClientSecret(), false));
         }
 
 		final String firstPaymentReferenceId = HyperswitchResponsesRecord.getPaymentAttemptId();

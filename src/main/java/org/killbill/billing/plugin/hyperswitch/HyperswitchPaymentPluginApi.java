@@ -669,7 +669,16 @@ public class HyperswitchPaymentPluginApi extends
     @Override
     protected PaymentTransactionInfoPlugin buildPaymentTransactionInfoPlugin(
         final HyperswitchResponsesRecord hyperswitchRecord) {
-        return HyperswitchPaymentTransactionInfoPlugin.build(hyperswitchRecord);
+        try {
+            // Get the payment method record using the payment ID
+            HyperswitchPaymentMethodsRecord paymentMethodRecord = 
+                this.hyperswitchDao.getPaymentMethodByPaymentId(hyperswitchRecord.getKbPaymentId());
+                
+            return HyperswitchPaymentTransactionInfoPlugin.build(hyperswitchRecord, paymentMethodRecord);
+        } catch (SQLException e) {
+            logger.warn("Failed to retrieve payment method for client secret", e);
+            return HyperswitchPaymentTransactionInfoPlugin.build(hyperswitchRecord, null);
+        }
     }
 
     @Override
