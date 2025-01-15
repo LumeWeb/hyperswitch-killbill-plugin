@@ -65,10 +65,10 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
 				hyperswitchResponsesRecord.getAmount(),
 				Strings.isNullOrEmpty(hyperswitchResponsesRecord.getCurrency())
 						? null
-						: Currency.valueOf(HyperswitchResponsesRecord.getCurrency()),
+						: Currency.valueOf(hyperswitchResponsesRecord.getCurrency()),
 				getPaymentPluginStatus(additionalData),
-				HyperswitchResponsesRecord.getErrorMessage(),
-				HyperswitchResponsesRecord.getErrorCode(),
+            hyperswitchResponsesRecord.getErrorMessage(),
+            hyperswitchResponsesRecord.getErrorCode(),
 				firstPaymentReferenceId,
 				null,
 				responseDate,
