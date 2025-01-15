@@ -277,7 +277,7 @@ public class HyperswitchPaymentPluginApi extends
             paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
             paymentsCreateRequest.customerId(kbAccountId.toString());
             paymentsCreateRequest.offSession(true);
-            paymentsCreateRequest.setPaymentMethodId(paymentMethod.getHyperswitchId());
+            paymentsCreateRequest.setMandateId(paymentMethod.getHyperswitchId());
 
             // Make API call
             PaymentsApi clientApi = buildHyperswitchClient(context);
@@ -514,7 +514,7 @@ public class HyperswitchPaymentPluginApi extends
                                                                                properties);
         // Extract client_secret if present
         String clientSecret = allProperties.get("client_secret");
-        
+
         try {
             this.hyperswitchDao.addPaymentMethod(
                 kbAccountId,
