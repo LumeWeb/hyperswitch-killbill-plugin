@@ -148,22 +148,22 @@ public class HyperswitchResponsesRecord extends UpdatableRecordImpl<HyperswitchR
 
     /** Setter for <code>killbill.hyperswitch_responses.created_date</code>. */
     public void setCreatedDate(LocalDateTime value) {
-        set(11, value);
+        set(12, value);
     }
 
     /** Getter for <code>killbill.hyperswitch_responses.created_date</code>. */
     public LocalDateTime getCreatedDate() {
-        return (LocalDateTime) get(11);
+        return (LocalDateTime) get(12);
     }
 
     /** Setter for <code>killbill.hyperswitch_responses.kb_tenant_id</code>. */
     public void setKbTenantId(String value) {
-        set(12, value);
+        set(13, value);
     }
 
     /** Getter for <code>killbill.hyperswitch_responses.kb_tenant_id</code>. */
     public String getKbTenantId() {
-        return (String) get(12);
+        return (String) get(13);
     }
 
     // -------------------------------------------------------------------------
