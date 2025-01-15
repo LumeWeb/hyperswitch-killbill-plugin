@@ -141,7 +141,19 @@ public class HyperswitchPaymentPluginApi extends
                 currency,
                 response,
                 context.getTenantId()
-                                                                               );
+            );
+
+            // Update payment method with client secret
+            if (response.getClientSecret() != null) {
+                try {
+                    this.hyperswitchDao.updatePaymentMethodClientSecret(
+                        kbPaymentMethodId,
+                        response.getClientSecret(),
+                        context.getTenantId());
+                } catch (SQLException e) {
+                    logger.warn("Failed to update payment method client secret", e);
+                }
+            }
 
             // Build properties for frontend
             List<PluginProperty> paymentProperties = new ArrayList<>();
@@ -175,7 +187,6 @@ public class HyperswitchPaymentPluginApi extends
             throw new PaymentPluginApiException("Database error while processing payment", e);
         }
     }
-
 
     private HyperswitchResponsesRecord storePaymentResponse(UUID kbAccountId,
                                                             UUID kbPaymentId,
@@ -683,9 +694,9 @@ public class HyperswitchPaymentPluginApi extends
         final HyperswitchResponsesRecord hyperswitchRecord) {
         try {
             // Get the payment method record using the payment ID
-            HyperswitchPaymentMethodsRecord paymentMethodRecord = 
+            HyperswitchPaymentMethodsRecord paymentMethodRecord =
                 this.hyperswitchDao.getPaymentMethodByPaymentId(hyperswitchRecord.getKbPaymentId());
-                
+
             return HyperswitchPaymentTransactionInfoPlugin.build(hyperswitchRecord, paymentMethodRecord);
         } catch (SQLException e) {
             logger.warn("Failed to retrieve payment method for client secret", e);
