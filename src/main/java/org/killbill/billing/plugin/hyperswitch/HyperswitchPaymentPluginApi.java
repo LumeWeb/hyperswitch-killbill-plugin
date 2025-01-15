@@ -227,8 +227,15 @@ public class HyperswitchPaymentPluginApi extends
             try {
                 hyperswitchRecord = this.hyperswitchDao.addResponse(
                     kbAccountId,
-                    kbPaymentId, kbTransactionId, TransactionType.CAPTURE, amount, currency, response,
-                    DateTime.now(), context.getTenantId());
+                    kbPaymentId,
+                    kbTransactionId,
+                    kbPaymentMethodId,
+                    TransactionType.CAPTURE,
+                    amount,
+                    currency,
+                    response,
+                    DateTime.now(),
+                    context.getTenantId());
             } catch (final SQLException e) {
                 throw new PaymentPluginApiException("Unable to refresh payment", e);
             }
