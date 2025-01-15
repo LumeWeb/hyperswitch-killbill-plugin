@@ -84,35 +84,37 @@ public class HyperswitchDao extends
                                  final String clientSecret,
                                  final UUID kbTenantId) throws SQLException {
         execute(dataSource.getConnection(),
-                new WithConnectionCallback<HyperswitchResponsesRecord>() {
-                    @Override
-                    public HyperswitchResponsesRecord withConnection(final Connection conn) throws SQLException {
-                        System.out.println("Adding payment method");
-                        DSL.using(conn, dialect, settings)
-                           .insertInto(HYPERSWITCH_PAYMENT_METHODS,
-                                       HYPERSWITCH_PAYMENT_METHODS.KB_ACCOUNT_ID,
-                                       HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID,
-                                       HYPERSWITCH_PAYMENT_METHODS.HYPERSWITCH_ID,
-                                       HYPERSWITCH_PAYMENT_METHODS.CLIENT_SECRET,
-                                       HYPERSWITCH_PAYMENT_METHODS.IS_DELETED,
-                                       HYPERSWITCH_PAYMENT_METHODS.ADDITIONAL_DATA,
-                                       HYPERSWITCH_PAYMENT_METHODS.CREATED_DATE,
-                                       HYPERSWITCH_PAYMENT_METHODS.UPDATED_DATE,
-                                       HYPERSWITCH_PAYMENT_METHODS.KB_TENANT_ID)
-                           .values(kbAccountId.toString(),
-                                   kbPaymentMethodId.toString(),
-                                   hyperswitchId,
-                                   clientSecret,
-                                   (short) FALSE,
-                                   asString(additionalDataMap),
-                                   toLocalDateTime(new DateTime()),
-                                   toLocalDateTime(new DateTime()),
-                                   kbTenantId.toString())
-                           .execute();
-                        System.out.println("Added payment method successfully");
-                        return null;
-                    }
-                });
+            new WithConnectionCallback<HyperswitchResponsesRecord>() {
+                @Override
+                public HyperswitchResponsesRecord withConnection(final Connection conn) throws SQLException {
+                    System.out.println("Adding payment method");
+                    DSL.using(conn, dialect, settings)
+                        .insertInto(HYPERSWITCH_PAYMENT_METHODS,
+                            HYPERSWITCH_PAYMENT_METHODS.KB_ACCOUNT_ID,
+                            HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID,
+                            HYPERSWITCH_PAYMENT_METHODS.HYPERSWITCH_ID,
+                            HYPERSWITCH_PAYMENT_METHODS.IS_DEFAULT,
+                            HYPERSWITCH_PAYMENT_METHODS.CLIENT_SECRET,
+                            HYPERSWITCH_PAYMENT_METHODS.IS_DELETED,
+                            HYPERSWITCH_PAYMENT_METHODS.ADDITIONAL_DATA,
+                            HYPERSWITCH_PAYMENT_METHODS.CREATED_DATE,
+                            HYPERSWITCH_PAYMENT_METHODS.UPDATED_DATE,
+                            HYPERSWITCH_PAYMENT_METHODS.KB_TENANT_ID)
+                        .values(kbAccountId.toString(),
+                            kbPaymentMethodId.toString(),
+                            hyperswitchId,
+                            (short) FALSE,  // is_default
+                            clientSecret,
+                            (short) FALSE,  // is_deleted
+                            asString(additionalDataMap),
+                            toLocalDateTime(new DateTime()),
+                            toLocalDateTime(new DateTime()),
+                            kbTenantId.toString())
+                        .execute();
+                    System.out.println("Added payment method successfully");
+                    return null;
+                }
+            });
     }
 
     public void updateMandateId(final UUID kbPaymentMethodId,
@@ -136,7 +138,7 @@ public class HyperswitchDao extends
                                   .fetchOne());
     }
 
-    public HyperswitchPaymentMethodsRecord getPaymentMethodByPaymentId(final String kbPaymentId) 
+    public HyperswitchPaymentMethodsRecord getPaymentMethodByPaymentId(final String kbPaymentId)
         throws SQLException {
         // First get the response record to find the payment method ID
         final HyperswitchResponsesRecord response = execute(dataSource.getConnection(),
@@ -144,7 +146,7 @@ public class HyperswitchDao extends
                       .selectFrom(HYPERSWITCH_RESPONSES)
                       .where(HYPERSWITCH_RESPONSES.KB_PAYMENT_ID.equal(kbPaymentId))
                       .fetchOne());
-                      
+
         if (response == null) {
             return null;
         }
@@ -228,40 +230,49 @@ public class HyperswitchDao extends
                                                   final UUID kbTenantId) throws SQLException {
         final Map<String, Object> additionalDataMap;
         additionalDataMap = HyperswitchPluginProperties.toAdditionalDataMap(refundResponse);
+
+        // First get the payment method ID from the original payment record
+        HyperswitchPaymentMethodsRecord paymentMethod = getPaymentMethodByPaymentId(kbPaymentId.toString());
+        if (paymentMethod == null) {
+            throw new SQLException("Could not find payment method for payment ID: " + kbPaymentId);
+        }
+
         return execute(dataSource.getConnection(),
-                       conn -> DSL.using(conn, dialect, settings).transactionResult(configuration -> {
-                           final DSLContext dslContext = DSL.using(configuration);
-                           dslContext.insertInto(HYPERSWITCH_RESPONSES,
-                                                 HYPERSWITCH_RESPONSES.KB_ACCOUNT_ID,
-                                                 HYPERSWITCH_RESPONSES.KB_PAYMENT_ID,
-                                                 HYPERSWITCH_RESPONSES.KB_PAYMENT_TRANSACTION_ID,
-                                                 HYPERSWITCH_RESPONSES.TRANSACTION_TYPE,
-                                                 HYPERSWITCH_RESPONSES.AMOUNT,
-                                                 HYPERSWITCH_RESPONSES.CURRENCY,
-                                                 HYPERSWITCH_RESPONSES.PAYMENT_ATTEMPT_ID,
-                                                 HYPERSWITCH_RESPONSES.ERROR_MESSAGE,
-                                                 HYPERSWITCH_RESPONSES.ERROR_CODE,
-                                                 HYPERSWITCH_RESPONSES.ADDITIONAL_DATA,
-                                                 HYPERSWITCH_RESPONSES.CREATED_DATE,
-                                                 HYPERSWITCH_RESPONSES.KB_TENANT_ID)
-                                     .values(kbAccountId.toString(),
-                                             kbPaymentId.toString(),
-                                             kbPaymentTransactionId.toString(),
-                                             transactionType.toString(),
-                                             amount,
-                                             currency == null ? null : currency.name(),
-                                             refundResponse.getPaymentId(),
-                                             refundResponse.getErrorMessage(),
-                                             refundResponse.getErrorCode(),
-                                             asString(additionalDataMap),
-                                             toLocalDateTime(utcNow),
-                                             kbTenantId.toString())
-                                     .execute();
-                           return dslContext.fetchOne(
-                               HYPERSWITCH_RESPONSES,
-                               HYPERSWITCH_RESPONSES.RECORD_ID
-                                   .eq(HYPERSWITCH_RESPONSES.RECORD_ID.getDataType().convert(dslContext.lastID())));
-                       }));
+            conn -> DSL.using(conn, dialect, settings).transactionResult(configuration -> {
+                final DSLContext dslContext = DSL.using(configuration);
+                dslContext.insertInto(HYPERSWITCH_RESPONSES,
+                        HYPERSWITCH_RESPONSES.KB_ACCOUNT_ID,
+                        HYPERSWITCH_RESPONSES.KB_PAYMENT_ID,
+                        HYPERSWITCH_RESPONSES.KB_PAYMENT_TRANSACTION_ID,
+                        HYPERSWITCH_RESPONSES.KB_PAYMENT_METHOD_ID,
+                        HYPERSWITCH_RESPONSES.TRANSACTION_TYPE,
+                        HYPERSWITCH_RESPONSES.AMOUNT,
+                        HYPERSWITCH_RESPONSES.CURRENCY,
+                        HYPERSWITCH_RESPONSES.PAYMENT_ATTEMPT_ID,
+                        HYPERSWITCH_RESPONSES.ERROR_MESSAGE,
+                        HYPERSWITCH_RESPONSES.ERROR_CODE,
+                        HYPERSWITCH_RESPONSES.ADDITIONAL_DATA,
+                        HYPERSWITCH_RESPONSES.CREATED_DATE,
+                        HYPERSWITCH_RESPONSES.KB_TENANT_ID)
+                    .values(kbAccountId.toString(),
+                        kbPaymentId.toString(),
+                        kbPaymentTransactionId.toString(),
+                        paymentMethod.getKbPaymentMethodId(),
+                        transactionType.toString(),
+                        amount,
+                        currency == null ? null : currency.name(),
+                        refundResponse.getPaymentId(),
+                        refundResponse.getErrorMessage(),
+                        refundResponse.getErrorCode(),
+                        asString(additionalDataMap),
+                        toLocalDateTime(utcNow),
+                        kbTenantId.toString())
+                    .execute();
+                return dslContext.fetchOne(
+                    HYPERSWITCH_RESPONSES,
+                    HYPERSWITCH_RESPONSES.RECORD_ID
+                        .eq(HYPERSWITCH_RESPONSES.RECORD_ID.getDataType().convert(dslContext.lastID())));
+            }));
     }
 
     public HyperswitchResponsesRecord updateResponse(final UUID kbPaymentTransactionId,
