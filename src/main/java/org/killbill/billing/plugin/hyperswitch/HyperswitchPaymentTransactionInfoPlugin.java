@@ -54,7 +54,15 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
         }
 
         // Add expires_at property (15 minutes from created_date)
-        DateTime expiresAt = new DateTime(hyperswitchResponsesRecord.getCreatedDate()).plusMinutes(15);
+        LocalDateTime createdDate = hyperswitchResponsesRecord.getCreatedDate();
+        DateTime expiresAt = new DateTime(
+            createdDate.getYear(),
+            createdDate.getMonthValue(), 
+            createdDate.getDayOfMonth(),
+            createdDate.getHour(),
+            createdDate.getMinute(),
+            createdDate.getSecond()
+        ).plusMinutes(15);
         paymentMethodProperties.add(new PluginProperty("expires_at", expiresAt.toString(), false));
 
         // Merge all properties, with payment method properties taking precedence
