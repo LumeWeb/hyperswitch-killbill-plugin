@@ -125,14 +125,14 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
      * Setter for <code>killbill.hyperswitch_payment_methods.additional_data</code>.
      */
     public void setAdditionalData(String value) {
-        set(6, value);
+        set(7, value);
     }
 
     /**
      * Getter for <code>killbill.hyperswitch_payment_methods.additional_data</code>.
      */
     public String getAdditionalData() {
-        return (String) get(6);
+        return (String) get(7);
     }
 
     /**
@@ -469,10 +469,11 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
         set(2, kbPaymentMethodId);
         set(3, hyperswitchId);
         set(4, isDefault);
-        set(5, isDeleted);
-        set(6, additionalData);
-        set(7, createdDate);
-        set(8, updatedDate);
-        set(9, kbTenantId);
+        set(5, clientSecret);
+        set(6, isDeleted);
+        set(7, additionalData);
+        set(8, createdDate);
+        set(9, updatedDate);
+        set(10, kbTenantId);
     }
 }
