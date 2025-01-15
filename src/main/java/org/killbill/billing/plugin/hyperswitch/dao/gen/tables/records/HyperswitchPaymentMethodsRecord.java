@@ -390,8 +390,8 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     }
 
     @Override
-    public HyperswitchPaymentMethodsRecord value5(Short value) {
-        setIsDefault(value);
+    public HyperswitchPaymentMethodsRecord value5(String value) {
+        setClientSecret(value);
         return this;
     }
 
