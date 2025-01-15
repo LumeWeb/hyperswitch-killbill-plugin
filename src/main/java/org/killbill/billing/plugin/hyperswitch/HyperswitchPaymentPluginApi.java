@@ -359,7 +359,8 @@ public class HyperswitchPaymentPluginApi extends
             try {
                 hyperswitchRecord = this.hyperswitchDao.addResponse(
                     kbAccountId,
-                    kbPaymentMethodId,
+                    kbPaymentId,
+                    kbTransactionId,
                     kbPaymentMethodId,
                     TransactionType.VOID,
                     hyperswitchRecord.getAmount(),
