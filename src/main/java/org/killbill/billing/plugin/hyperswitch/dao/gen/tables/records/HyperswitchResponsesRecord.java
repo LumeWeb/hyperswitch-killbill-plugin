@@ -83,17 +83,17 @@ public class HyperswitchResponsesRecord extends UpdatableRecordImpl<HyperswitchR
 
     /** Getter for <code>killbill.hyperswitch_responses.transaction_type</code>. */
     public String getTransactionType() {
-        return (String) get(4);
+        return (String) get(5);
     }
 
     /** Setter for <code>killbill.hyperswitch_responses.amount</code>. */
     public void setAmount(BigDecimal value) {
-        set(5, value);
+        set(6, value);
     }
 
     /** Getter for <code>killbill.hyperswitch_responses.amount</code>. */
     public BigDecimal getAmount() {
-        return (BigDecimal) get(5);
+        return (BigDecimal) get(6);
     }
 
     /** Setter for <code>killbill.hyperswitch_responses.currency</code>. */
