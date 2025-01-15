@@ -23,8 +23,8 @@ create table hyperswitch_payment_methods (
 , kb_account_id char(36) not null
 , kb_payment_method_id char(36) not null
 , hyperswitch_id varchar(255) not null
-, client_secret varchar(255) default null
 , is_default smallint not null default 0
+, client_secret varchar(255) default null
 , is_deleted smallint not null default 0
 , additional_data longtext default null
 , created_date datetime not null

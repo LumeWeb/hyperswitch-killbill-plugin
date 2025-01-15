@@ -80,20 +80,6 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     }
 
     /**
-     * Setter for <code>killbill.hyperswitch_payment_methods.client_secret</code>.
-     */
-    public void setClientSecret(String value) {
-        set(4, value);
-    }
-
-    /**
-     * Getter for <code>killbill.hyperswitch_payment_methods.client_secret</code>.
-     */
-    public String getClientSecret() {
-        return (String) get(4);
-    }
-
-    /**
      * Setter for <code>killbill.hyperswitch_payment_methods.is_default</code>.
      */
     public void setIsDefault(Short value) {
@@ -105,6 +91,20 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
      */
     public Short getIsDefault() {
         return (Short) get(4);
+    }
+
+    /**
+     * Setter for <code>killbill.hyperswitch_payment_methods.client_secret</code>.
+     */
+    public void setClientSecret(String value) {
+        set(5, value);
+    }
+
+    /**
+     * Getter for <code>killbill.hyperswitch_payment_methods.client_secret</code>.
+     */
+    public String getClientSecret() {
+        return (String) get(5);
     }
 
     /**
