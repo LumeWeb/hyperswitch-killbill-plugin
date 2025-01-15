@@ -231,7 +231,7 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     }
 
     @Override
-    public Field<Short> field6() {
+    public Field<Short> field7() {
         return HyperswitchPaymentMethods.HYPERSWITCH_PAYMENT_METHODS.IS_DELETED;
     }
 
@@ -336,7 +336,7 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
     }
 
     @Override
-    public Short value6() {
+    public Short value7() {
         return getIsDeleted();
     }
 
