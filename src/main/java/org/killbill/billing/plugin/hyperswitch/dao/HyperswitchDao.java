@@ -136,6 +136,15 @@ public class HyperswitchDao extends
                                   .fetchOne());
     }
 
+    public HyperswitchPaymentMethodsRecord getPaymentMethodByPaymentId(final String kbPaymentId)
+        throws SQLException {
+        return execute(dataSource.getConnection(),
+                       conn -> DSL.using(conn, dialect, settings)
+                                  .selectFrom(HYPERSWITCH_PAYMENT_METHODS)
+                                  .where(HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_ID.equal(kbPaymentId))
+                                  .fetchOne());
+    }
+
     public void deletePaymentMethod(final UUID kbPaymentMethodId,
                                     final UUID kbTenantId) throws SQLException {
         execute(dataSource.getConnection(),
