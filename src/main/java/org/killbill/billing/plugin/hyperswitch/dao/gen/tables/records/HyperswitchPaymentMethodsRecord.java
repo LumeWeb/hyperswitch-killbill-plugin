@@ -111,14 +111,14 @@ public class HyperswitchPaymentMethodsRecord extends UpdatableRecordImpl<Hypersw
      * Setter for <code>killbill.hyperswitch_payment_methods.is_deleted</code>.
      */
     public void setIsDeleted(Short value) {
-        set(5, value);
+        set(6, value);
     }
 
     /**
      * Getter for <code>killbill.hyperswitch_payment_methods.is_deleted</code>.
      */
     public Short getIsDeleted() {
-        return (Short) get(5);
+        return (Short) get(6);
     }
 
     /**
