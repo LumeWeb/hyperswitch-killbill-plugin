@@ -136,17 +136,25 @@ public class HyperswitchDao extends
                                   .fetchOne());
     }
 
-    public HyperswitchPaymentMethodsRecord getPaymentMethodByPaymentId(final String kbPaymentId)
+    public HyperswitchPaymentMethodsRecord getPaymentMethodByPaymentId(final String kbPaymentId) 
         throws SQLException {
-        // Join with responses table to get payment method info
+        // First get the response record to find the payment method ID
+        final HyperswitchResponsesRecord response = execute(dataSource.getConnection(),
+            conn -> DSL.using(conn, dialect, settings)
+                      .selectFrom(HYPERSWITCH_RESPONSES)
+                      .where(HYPERSWITCH_RESPONSES.KB_PAYMENT_ID.equal(kbPaymentId))
+                      .fetchOne());
+                      
+        if (response == null) {
+            return null;
+        }
+
+        // Then get the payment method record
         return execute(dataSource.getConnection(),
-                       conn -> DSL.using(conn, dialect, settings)
-                                  .select(HYPERSWITCH_PAYMENT_METHODS.fields())
-                                  .from(HYPERSWITCH_PAYMENT_METHODS)
-                                  .join(HYPERSWITCH_RESPONSES)
-                                  .on(HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID.eq(HYPERSWITCH_RESPONSES.KB_PAYMENT_METHOD_ID))
-                                  .where(HYPERSWITCH_RESPONSES.KB_PAYMENT_ID.equal(kbPaymentId))
-                                  .fetchOneInto(HyperswitchPaymentMethodsRecord.class));
+            conn -> DSL.using(conn, dialect, settings)
+                      .selectFrom(HYPERSWITCH_PAYMENT_METHODS)
+                      .where(HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID.equal(response.getKbPaymentMethodId()))
+                      .fetchOne());
     }
 
     public void deletePaymentMethod(final UUID kbPaymentMethodId,
