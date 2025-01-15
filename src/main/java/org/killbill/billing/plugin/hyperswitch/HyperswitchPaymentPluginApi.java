@@ -299,6 +299,7 @@ public class HyperswitchPaymentPluginApi extends
                 kbAccountId,
                 kbPaymentId,
                 kbTransactionId,
+                kbPaymentMethodId,
                 TransactionType.PURCHASE,
                 amount,
                 currency,
