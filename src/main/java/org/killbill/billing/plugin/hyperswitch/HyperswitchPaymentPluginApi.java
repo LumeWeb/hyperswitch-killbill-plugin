@@ -512,12 +512,16 @@ public class HyperswitchPaymentPluginApi extends
         logger.info("[addPaymentMethod] Adding Payment Method");
         final Map<String, String> allProperties = PluginProperties.toStringMap(paymentMethodProps.getProperties(),
                                                                                properties);
+        // Extract client_secret if present
+        String clientSecret = allProperties.get("client_secret");
+        
         try {
             this.hyperswitchDao.addPaymentMethod(
                 kbAccountId,
                 kbPaymentMethodId,
                 allProperties,
                 "",
+                clientSecret,
                 context.getTenantId());
         } catch (SQLException e) {
             throw new PaymentPluginApiException("Error calling Hyperswitch while adding payment method", e);
