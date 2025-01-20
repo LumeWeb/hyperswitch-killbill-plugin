@@ -30,6 +30,8 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import javax.sql.DataSource;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.joda.time.DateTime;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
@@ -64,6 +66,9 @@ public class HyperswitchDao extends
 
     static {
         staticObjectMapper.setSerializationInclusion(Include.NON_EMPTY);
+        staticObjectMapper
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     private final Clock clock;

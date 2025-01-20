@@ -98,7 +98,9 @@ public class HyperswitchPaymentPluginApi extends
         this.hyperswitchConfigurationHandler = hyperswitchConfigPropertiesConfigurationHandler;
         this.hyperswitchDao = dao;
         this.objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
+        ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
     @Override
     public PaymentTransactionInfoPlugin authorizePayment(final UUID kbAccountId,
