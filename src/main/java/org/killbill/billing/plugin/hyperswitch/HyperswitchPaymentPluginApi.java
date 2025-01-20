@@ -30,6 +30,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hyperswitch.client.auth.ApiKeyAuth;
+import com.hyperswitch.client.model.*;
 import org.joda.time.DateTime;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.osgi.libs.killbill.OSGIConfigPropertiesService;
@@ -64,16 +65,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hyperswitch.client.api.PaymentMethodsApi;
 import com.hyperswitch.client.api.PaymentsApi;
 import com.hyperswitch.client.api.RefundsApi;
-import com.hyperswitch.client.model.CaptureMethod;
-import com.hyperswitch.client.model.IntentStatus;
-import com.hyperswitch.client.model.PaymentRetrieveBody;
-import com.hyperswitch.client.model.PaymentsCancelRequest;
-import com.hyperswitch.client.model.PaymentsCaptureRequest;
-import com.hyperswitch.client.model.PaymentsCreateRequest;
-import com.hyperswitch.client.model.PaymentsResponse;
-import com.hyperswitch.client.model.RefundRequest;
-import com.hyperswitch.client.model.RefundResponse;
-import com.hyperswitch.client.model.RefundStatus;
 
 //
 // A 'real' payment plugin would of course implement this interface.
@@ -141,6 +132,7 @@ public class HyperswitchPaymentPluginApi extends
             paymentsCreateRequest.offSession(false);
             paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
             paymentsCreateRequest.setCaptureMethod(CaptureMethod.MANUAL);
+            paymentsCreateRequest.paymentExperience(PaymentExperience.INVOKE_SDK_CLIENT);
 
             // Only create new payment if needed
             PaymentsResponse response;
