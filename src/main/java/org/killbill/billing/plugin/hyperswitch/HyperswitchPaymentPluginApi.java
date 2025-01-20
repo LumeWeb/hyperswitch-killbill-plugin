@@ -99,7 +99,7 @@ public class HyperswitchPaymentPluginApi extends
         this.hyperswitchConfigurationHandler = hyperswitchConfigPropertiesConfigurationHandler;
         this.hyperswitchDao = dao;
         this.objectMapper = new ObjectMapper();
-        ObjectMapper objectMapper = new ObjectMapper()
+        this.objectMapper
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
