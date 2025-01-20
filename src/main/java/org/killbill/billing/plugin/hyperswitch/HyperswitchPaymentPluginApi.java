@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hyperswitch.client.auth.ApiKeyAuth;
 import org.joda.time.DateTime;
 import org.killbill.billing.catalog.api.Currency;
@@ -97,6 +98,7 @@ public class HyperswitchPaymentPluginApi extends
         this.hyperswitchConfigurationHandler = hyperswitchConfigPropertiesConfigurationHandler;
         this.hyperswitchDao = dao;
         this.objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
     }
     @Override
     public PaymentTransactionInfoPlugin authorizePayment(final UUID kbAccountId,
