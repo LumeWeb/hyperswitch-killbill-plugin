@@ -54,9 +54,9 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
         }
 
         // Get expires_at from additional data if present
-        String expiresAt = (String) additionalData.get("expires_at");
+        String expiresAt = (String) additionalData.get("expires_on");
         if (expiresAt != null) {
-            paymentMethodProperties.add(new PluginProperty("expires_at", expiresAt, false));
+            paymentMethodProperties.add(new PluginProperty("expires_on", expiresAt, false));
         }
 
         // Merge all properties, with payment method properties taking precedence
