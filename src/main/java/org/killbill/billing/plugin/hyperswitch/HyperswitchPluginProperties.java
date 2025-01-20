@@ -20,6 +20,7 @@ public abstract class HyperswitchPluginProperties {
         additionalDataMap.put("customer_id", hyperswitchPaymentResponse.getCustomerId());
         additionalDataMap.put("reference_id",hyperswitchPaymentResponse.getReferenceId());
         additionalDataMap.put("profile_id", hyperswitchPaymentResponse.getProfileId());
+        additionalDataMap.put("expires_on", hyperswitchPaymentResponse.getExpiresOn());
         return additionalDataMap;
     }
 

@@ -53,17 +53,11 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
             paymentMethodProperties.add(new PluginProperty("client_secret", paymentMethodRecord.getClientSecret(), false));
         }
 
-        // Add expires_at property (15 minutes from created_date)
-        LocalDateTime createdDate = hyperswitchResponsesRecord.getCreatedDate();
-        DateTime expiresAt = new DateTime(
-            createdDate.getYear(),
-            createdDate.getMonthValue(), 
-            createdDate.getDayOfMonth(),
-            createdDate.getHour(),
-            createdDate.getMinute(),
-            createdDate.getSecond()
-        ).plusMinutes(15);
-        paymentMethodProperties.add(new PluginProperty("expires_at", expiresAt.toString(), false));
+        // Get expires_at from additional data if present
+        String expiresAt = (String) additionalData.get("expires_at");
+        if (expiresAt != null) {
+            paymentMethodProperties.add(new PluginProperty("expires_at", expiresAt, false));
+        }
 
         // Merge all properties, with payment method properties taking precedence
         Iterable<PluginProperty> mergedProperties = PluginProperties.merge(additionalDataProperties, paymentMethodProperties);
@@ -90,45 +84,45 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
             (List<PluginProperty>) mergedProperties);
     }
 
-	public HyperswitchPaymentTransactionInfoPlugin(final HyperswitchResponsesRecord hyperswitchResponsesRecord,
-			UUID kbPaymentId, UUID kbTransactionPaymentPaymentId,
-			TransactionType transactionType, BigDecimal amount, Currency currency, PaymentPluginStatus pluginStatus,
-			String gatewayError, String gatewayErrorCode, String firstPaymentReferenceId,
-			String secondPaymentReferenceId, DateTime createdDate, DateTime effectiveDate,
-			List<PluginProperty> properties) {
-		super(kbPaymentId, kbTransactionPaymentPaymentId, transactionType, amount, currency, pluginStatus, gatewayError,
-				gatewayErrorCode, firstPaymentReferenceId, secondPaymentReferenceId, createdDate, effectiveDate,
-				properties);
-	}
+    public HyperswitchPaymentTransactionInfoPlugin(final HyperswitchResponsesRecord hyperswitchResponsesRecord,
+                                                   UUID kbPaymentId, UUID kbTransactionPaymentPaymentId,
+                                                   TransactionType transactionType, BigDecimal amount, Currency currency, PaymentPluginStatus pluginStatus,
+                                                   String gatewayError, String gatewayErrorCode, String firstPaymentReferenceId,
+                                                   String secondPaymentReferenceId, DateTime createdDate, DateTime effectiveDate,
+                                                   List<PluginProperty> properties) {
+        super(kbPaymentId, kbTransactionPaymentPaymentId, transactionType, amount, currency, pluginStatus, gatewayError,
+            gatewayErrorCode, firstPaymentReferenceId, secondPaymentReferenceId, createdDate, effectiveDate,
+            properties);
+    }
 
-	public static PaymentTransactionInfoPlugin cancelPaymentTransactionInfoPlugin(
-			TransactionType transactionType, String message) {
+    public static PaymentTransactionInfoPlugin cancelPaymentTransactionInfoPlugin(
+        TransactionType transactionType, String message) {
 
-		return new HyperswitchPaymentTransactionInfoPlugin(
-				null,
-				null,
-				null,
-				transactionType,
-				null,
-				null,
-				PaymentPluginStatus.CANCELED,
-				message,
-				null,
-				null,
-				null,
-				null,
-				null,
-				null);
-	}
+        return new HyperswitchPaymentTransactionInfoPlugin(
+            null,
+            null,
+            null,
+            transactionType,
+            null,
+            null,
+            PaymentPluginStatus.CANCELED,
+            message,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    }
 
-	private static PaymentPluginStatus getPaymentPluginStatus(final Map additionalData) {
+    private static PaymentPluginStatus getPaymentPluginStatus(final Map additionalData) {
         final String status = (String) additionalData.get("status");
         if ("succeeded".equals(status) || "requires_capture".equals(status)) {
             return PaymentPluginStatus.PROCESSED;
         } else if ("processing".equals(status) ||
-                   "requires_payment_method".equals(status) ||
-                   "requires_confirmation".equals(status) ||
-                   "requires_customer_action".equals(status)) {
+            "requires_payment_method".equals(status) ||
+            "requires_confirmation".equals(status) ||
+            "requires_customer_action".equals(status)) {
             return PaymentPluginStatus.PENDING;
         } else if ("failed".equals(status)) {
             return PaymentPluginStatus.ERROR;
@@ -138,5 +132,4 @@ public class HyperswitchPaymentTransactionInfoPlugin extends PluginPaymentTransa
             return PaymentPluginStatus.UNDEFINED;
         }
     }
-
 }

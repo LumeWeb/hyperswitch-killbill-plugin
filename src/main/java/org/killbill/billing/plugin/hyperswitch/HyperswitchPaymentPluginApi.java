@@ -98,7 +98,6 @@ public class HyperswitchPaymentPluginApi extends
         this.hyperswitchDao = dao;
         this.objectMapper = new ObjectMapper();
     }
-
     @Override
     public PaymentTransactionInfoPlugin authorizePayment(final UUID kbAccountId,
                                                          final UUID kbPaymentId,
@@ -109,23 +108,52 @@ public class HyperswitchPaymentPluginApi extends
                                                          final Iterable<PluginProperty> properties,
                                                          final CallContext context) throws PaymentPluginApiException {
         try {
-            // Build payment request for initial authorization
+            // Check for existing payment ID and expiry
+            HyperswitchResponsesRecord existingResponse = null;
+            try {
+                existingResponse = this.hyperswitchDao.getSuccessfulResponse(kbPaymentId, context.getTenantId());
+            } catch (SQLException e) {
+                logger.warn("Failed to retrieve existing response", e);
+            }
+
+            boolean shouldCreateNewPayment = true;
+            if (existingResponse != null) {
+                Map additionalData = HyperswitchDao.mapFromAdditionalDataString(existingResponse.getAdditionalData());
+                if (additionalData.containsKey("expires_on")) {
+                    DateTime expiresOn = DateTime.parse((String) additionalData.get("expires_on"));
+                    if (expiresOn.isAfterNow()) {
+                        shouldCreateNewPayment = false;
+                    }
+                }
+            }
+
+            // Build payment request for authorization
             PaymentsCreateRequest paymentsCreateRequest = new PaymentsCreateRequest();
             paymentsCreateRequest.setAmount(KillBillMoney.toMinorUnits(currency.toString(), amount));
             paymentsCreateRequest.setCurrency(convertCurrency(currency));
-            paymentsCreateRequest.confirm(false); // Requires frontend confirmation
+            paymentsCreateRequest.confirm(false);
             paymentsCreateRequest.customerId(kbAccountId.toString());
-            paymentsCreateRequest.offSession(false); // This is an interactive session
+            paymentsCreateRequest.offSession(false);
             paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
             paymentsCreateRequest.setCaptureMethod(CaptureMethod.MANUAL);
 
-            // Call Hyperswitch API
-            PaymentsApi clientApi = buildHyperswitchClient(context);
+            // Only create new payment if needed
             PaymentsResponse response;
-            try {
-                response = clientApi.createAPayment(paymentsCreateRequest);
-            } catch (com.hyperswitch.client.ApiException e) {
-                throw new PaymentPluginApiException("Payment execution failed: " + e.getMessage(), e);
+            if (shouldCreateNewPayment) {
+                PaymentsApi clientApi = buildHyperswitchClient(context);
+                try {
+                    response = clientApi.createAPayment(paymentsCreateRequest);
+                } catch (com.hyperswitch.client.ApiException e) {
+                    throw new PaymentPluginApiException("Payment execution failed: " + e.getMessage(), e);
+                }
+            } else {
+                // Reuse existing payment info
+                response = new PaymentsResponse();
+                response.setPaymentId(existingResponse.getPaymentAttemptId());
+                response.setClientSecret(getClientSecretFromResponse(existingResponse));
+                response.setStatus(getStatusFromResponse(existingResponse));
+                response.setErrorMessage(existingResponse.getErrorMessage());
+                response.setErrorCode(existingResponse.getErrorCode());
             }
 
             // Process response
@@ -185,6 +213,26 @@ public class HyperswitchPaymentPluginApi extends
 
         } catch (SQLException e) {
             throw new PaymentPluginApiException("Database error while processing payment", e);
+        }
+    }
+
+    private String getClientSecretFromResponse(HyperswitchResponsesRecord response) {
+        try {
+            Map additionalData = HyperswitchDao.mapFromAdditionalDataString(response.getAdditionalData());
+            return (String) additionalData.get("client_secret");
+        } catch (Exception e) {
+            logger.warn("Failed to extract client secret from response", e);
+            return null;
+        }
+    }
+
+    private IntentStatus getStatusFromResponse(HyperswitchResponsesRecord response) {
+        try {
+            Map additionalData = HyperswitchDao.mapFromAdditionalDataString(response.getAdditionalData());
+            return IntentStatus.fromValue((String) additionalData.get("status"));
+        } catch (Exception e) {
+            logger.warn("Failed to extract status from response", e);
+            return IntentStatus.REQUIRES_PAYMENT_METHOD;
         }
     }
 
