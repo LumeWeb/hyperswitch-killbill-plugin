@@ -35,6 +35,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hyperswitch.client.auth.ApiKeyAuth;
+import org.apache.commons.codec.binary.Hex;
 import org.joda.time.DateTime;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.osgi.libs.killbill.OSGIConfigPropertiesService;
@@ -79,7 +80,6 @@ import com.hyperswitch.client.model.PaymentsResponse;
 import com.hyperswitch.client.model.RefundRequest;
 import com.hyperswitch.client.model.RefundResponse;
 import com.hyperswitch.client.model.RefundStatus;
-import org.apache.commons.codec.binary.Hex;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -867,34 +867,20 @@ public class HyperswitchPaymentPluginApi extends
 
     private String verifyWebhookSignature(String payload, String signature, String secretKey) throws PaymentPluginApiException {
         try {
-            // 1. Raw payload verification
-            Mac macRaw = Mac.getInstance("HmacSHA512");
-            SecretKeySpec secretKeySpecRaw = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
-            macRaw.init(secretKeySpecRaw);
-            byte[] rawHmac = macRaw.doFinal(payload.getBytes(StandardCharsets.UTF_8));
-            String rawSignature = Hex.encodeHexString(rawHmac);
+            // Generate HMAC-SHA512 signature using the raw payload string
+            Mac mac = Mac.getInstance("HmacSHA512");
+            SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
+            mac.init(secretKeySpec);
+            byte[] hmac = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            String expectedSignature = Hex.encodeHexString(hmac);
 
-            if (!MessageDigest.isEqual(signature.getBytes(StandardCharsets.UTF_8), rawSignature.getBytes(StandardCharsets.UTF_8))) {
-                throw new PaymentPluginApiException("Raw signature verification failed", new IllegalStateException());
-            }
-
-            // 2. JSON canonical verification
-            // Parse and re-serialize to get canonical form
-            JsonNode jsonNode = objectMapper.readTree(payload);
-            String canonicalJson = objectMapper.writeValueAsString(jsonNode);
-
-            Mac macJson = Mac.getInstance("HmacSHA512");
-            SecretKeySpec secretKeySpecJson = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
-            macJson.init(secretKeySpecJson);
-            byte[] jsonHmac = macJson.doFinal(canonicalJson.getBytes(StandardCharsets.UTF_8));
-            String jsonSignature = Hex.encodeHexString(jsonHmac);
-
-            if (!MessageDigest.isEqual(signature.getBytes(StandardCharsets.UTF_8), jsonSignature.getBytes(StandardCharsets.UTF_8))) {
-                throw new PaymentPluginApiException("JSON signature verification failed", new IllegalStateException());
+            // Compare signatures using constant-time comparison
+            if (!MessageDigest.isEqual(signature.getBytes(StandardCharsets.UTF_8), expectedSignature.getBytes(StandardCharsets.UTF_8))) {
+                throw new PaymentPluginApiException("Signature verification failed", new IllegalStateException());
             }
 
             return payload;
-        } catch (NoSuchAlgorithmException | InvalidKeyException | IOException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new PaymentPluginApiException("Error verifying webhook signature", e);
         }
     }
