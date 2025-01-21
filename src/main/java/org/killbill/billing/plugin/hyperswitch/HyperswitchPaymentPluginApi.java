@@ -1013,7 +1013,6 @@ public class HyperswitchPaymentPluginApi extends
             final Map<String, Object> additionalData = new HashMap<>();
             additionalData.put("status", status);
             if (errorCode != null && !errorCode.isEmpty() && !errorCode.equals("null")) {
-
                 additionalData.put("error_code", errorCode);
             }
             if (errorMessage != null && !errorMessage.isEmpty() && !errorCode.equals("null")) {
