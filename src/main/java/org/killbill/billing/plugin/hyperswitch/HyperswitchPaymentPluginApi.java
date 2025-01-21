@@ -276,8 +276,9 @@ public class HyperswitchPaymentPluginApi extends
         HyperswitchResponsesRecord hyperswitchRecord = null;
         try {
             hyperswitchRecord = this.hyperswitchDao.getSuccessfulResponse(kbPaymentId, context.getTenantId());
-            if (this.refundValidations(hyperswitchRecord, amount) != null) {
-                return this.refundValidations(hyperswitchRecord, amount);
+            PaymentTransactionInfoPlugin validationResult = this.refundValidations(hyperswitchRecord, amount);
+            if (validationResult != null && validationResult.getStatus() == PaymentPluginStatus.CANCELED) {
+                return validationResult;
             }
         } catch (SQLException e) {
             logger.error("[capturePayment]  but we encountered a database error", e);
@@ -1030,26 +1031,27 @@ public class HyperswitchPaymentPluginApi extends
         }
     }
 
-    public PaymentTransactionInfoPlugin refundValidations( // Validate this function with currency unit of amount
-                                                           HyperswitchResponsesRecord hyperswitchRecord, BigDecimal amount) {
+    public PaymentTransactionInfoPlugin refundValidations(
+        HyperswitchResponsesRecord hyperswitchRecord, BigDecimal amount) {
         if (hyperswitchRecord == null) {
-            logger.error("[refundPayment] Purchase do not exists");
+            logger.error("[refundPayment] Purchase does not exist");
             return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
-                TransactionType.REFUND, "Purchase do not exists");
+                TransactionType.REFUND, "Purchase does not exist");
         }
 
-        if (hyperswitchRecord.getAmount().compareTo(amount) < 0) {
+        // Skip validation if amount is zero
+        if (amount != null && BigDecimal.ZERO.compareTo(amount) == 0) {
+            return null;
+        }
+
+        // Only validate non-zero amounts
+        if (amount != null && hyperswitchRecord.getAmount().compareTo(amount) < 0) {
             logger.error("[refundPayment] The refund amount is more than the transaction amount");
             return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
                 TransactionType.REFUND, "The refund amount is more than the transaction amount");
         }
-        if (BigDecimal.ZERO.compareTo(amount) == 0) {
-            logger.error("[refundPayment] The refund amount can not be zero");
-            return HyperswitchPaymentTransactionInfoPlugin.cancelPaymentTransactionInfoPlugin(
-                TransactionType.REFUND, "The refund amount can not be zero");
-        } else {
-            return null;
-        }
+
+        return null;
     }
 
     private PaymentApiWrapper getPaymentApiWrapper() {
