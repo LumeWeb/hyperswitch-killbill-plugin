@@ -26,23 +26,19 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hyperswitch.client.auth.ApiKeyAuth;
 import org.apache.commons.codec.binary.Hex;
 import org.joda.time.DateTime;
+import org.killbill.billing.account.api.Account;
+import org.killbill.billing.account.api.AccountApiException;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.osgi.libs.killbill.OSGIConfigPropertiesService;
 import org.killbill.billing.osgi.libs.killbill.OSGIKillbillAPI;
-import org.killbill.billing.payment.api.PaymentMethodPlugin;
-import org.killbill.billing.payment.api.PluginProperty;
-import org.killbill.billing.payment.api.TransactionType;
+import org.killbill.billing.payment.api.*;
 import org.killbill.billing.payment.plugin.api.GatewayNotification;
 import org.killbill.billing.payment.plugin.api.HostedPaymentPageFormDescriptor;
 import org.killbill.billing.payment.plugin.api.PaymentMethodInfoPlugin;
@@ -909,31 +905,19 @@ public class HyperswitchPaymentPluginApi extends
                 throw new PaymentPluginApiException("Missing webhook signing key configuration", new IllegalStateException());
             }
 
-            // Verify webhook signature using both methods
+            // Verify webhook signature
             String verifiedPayload = verifyWebhookSignature(notification, signature, config.getWebhookSecret());
 
             // Process the verified webhook payload
             final JsonNode event = objectMapper.readTree(verifiedPayload);
             final String eventId = event.path("event_id").asText();
             final String eventType = event.path("event_type").asText();
-            final String paymentId = event.path("content")
-                .path("object")
-                .path("payment_id")
-                .asText();
-            final String status = event.path("content")
-                .path("object")
-                .path("status")
-                .asText();
-            final String errorCode = event.path("content")
-                .path("object")
-                .path("error_code")
-                .asText();
-            final String errorMessage = event.path("content")
-                .path("object")
-                .path("error_message")
-                .asText();
+            final JsonNode content = event.path("content").path("object");
+            final String paymentId = content.path("payment_id").asText();
+            final String status = content.path("status").asText();
+            final String errorCode = content.path("error_code").asText();
+            final String errorMessage = content.path("error_message").asText();
 
-            // Rest of the processing remains the same...
             // Check for duplicate event
             if (hyperswitchDao.isEventProcessed(eventId, context.getTenantId())) {
                 logger.info("Skipping duplicate webhook event {}", eventId);
@@ -963,18 +947,58 @@ public class HyperswitchPaymentPluginApi extends
                 notification,
                 context.getTenantId());
 
-            // Handle mandate for successful payments
-            if ("payment_intent.succeeded".equals(eventType)) {
-                String paymentMethodId = event.path("content")
-                    .path("object")
-                    .path("payment_id")
-                    .asText();
-                if (paymentMethodId != null && !paymentMethodId.isEmpty()) {
-                    this.hyperswitchDao.updateHyperswitchId(
-                        UUID.fromString(response.getKbPaymentId()),
-                        paymentMethodId,
-                        UUID.fromString(response.getKbTenantId()));
-                }
+            // Handle different event types
+            switch (eventType) {
+                case "payment_authorized":
+                    // Handle authorized payment that requires capture
+                    if ("requires_capture".equals(status)) {
+                        // Get account
+                        Account account = killbillAPI.getAccountUserApi().getAccountById(
+                            UUID.fromString(response.getKbAccountId()),
+                            context
+                        );
+
+                        // Get payment to access the correct amount and currency
+                        Payment payment = killbillAPI.getPaymentApi().getPayment(
+                            UUID.fromString(response.getKbPaymentId()),
+                            false,
+                            false,
+                            Collections.emptyList(),
+                            context
+                        );
+
+                        // 1. Create capture transaction in Kill Bill using payment data
+                        killbillAPI.getPaymentApi().createCapture(
+                            account,
+                            UUID.fromString(response.getKbPaymentId()),
+                            payment.getAuthAmount(),
+                            payment.getCurrency(),
+                            null,
+                            null,
+                            Collections.emptyList(),
+                            context
+                        );
+
+                        // 2. Notify Kill Bill of successful authorization
+                        killbillAPI.getPaymentApi().notifyPendingTransactionOfStateChanged(
+                            account,
+                            UUID.fromString(response.getKbPaymentTransactionId()),
+                            true, // isSuccess = true for successful authorization
+                            context
+                        );
+                    }
+                    break;
+
+                case "payment_succeeded":
+                    // Handle mandate for successful payments
+                    String paymentMethodId = content.path("payment_method_id").asText();
+                    if (paymentMethodId != null && !paymentMethodId.isEmpty()) {
+                        this.hyperswitchDao.updateHyperswitchId(
+                            UUID.fromString(response.getKbPaymentId()),
+                            paymentMethodId,
+                            UUID.fromString(response.getKbTenantId()));
+                    }
+                    break;
             }
 
             // Update payment status
@@ -993,6 +1017,10 @@ public class HyperswitchPaymentPluginApi extends
 
         } catch (SQLException e) {
             throw new PaymentPluginApiException("Database error while processing notification", e);
+        } catch (AccountApiException e) {
+            throw new PaymentPluginApiException("Error retrieving account information", e);
+        } catch (PaymentApiException e) {
+            throw new PaymentPluginApiException("Error notifying payment state change", e);
         } catch (Exception e) {
             throw new PaymentPluginApiException("Error processing notification: " + e.getMessage(), e);
         }
