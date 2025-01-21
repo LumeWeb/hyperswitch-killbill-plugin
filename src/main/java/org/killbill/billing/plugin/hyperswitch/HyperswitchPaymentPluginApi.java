@@ -77,7 +77,7 @@ import javax.crypto.spec.SecretKeySpec;
 // A 'real' payment plugin would of course implement this interface.
 //
 public class HyperswitchPaymentPluginApi extends
-                                         PluginPaymentPluginApi<HyperswitchResponsesRecord, HyperswitchResponses, HyperswitchPaymentMethodsRecord, HyperswitchPaymentMethods> {
+    PluginPaymentPluginApi<HyperswitchResponsesRecord, HyperswitchResponses, HyperswitchPaymentMethodsRecord, HyperswitchPaymentMethods> {
 
     private static final Logger logger = LoggerFactory.getLogger(HyperswitchPaymentPluginApi.class);
     private final HyperswitchConfigurationHandler hyperswitchConfigurationHandler;
@@ -101,6 +101,7 @@ public class HyperswitchPaymentPluginApi extends
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
+
     @Override
     public PaymentTransactionInfoPlugin authorizePayment(final UUID kbAccountId,
                                                          final UUID kbPaymentId,
@@ -261,7 +262,7 @@ public class HyperswitchPaymentPluginApi extends
             response,
             clock.getUTCNow(),
             tenantId
-                                              );
+        );
     }
 
     @Override
@@ -379,7 +380,7 @@ public class HyperswitchPaymentPluginApi extends
                 response,
                 clock.getUTCNow(),
                 context.getTenantId()
-                                                                                          );
+            );
 
             return new HyperswitchPaymentTransactionInfoPlugin(
                 hyperswitchRecord,
@@ -534,7 +535,7 @@ public class HyperswitchPaymentPluginApi extends
                                                              final Iterable<PluginProperty> properties, final TenantContext context) throws PaymentPluginApiException {
         logger.info("[getPaymentInfo] getPaymentInfo for account {}", kbAccountId);
         final List<PaymentTransactionInfoPlugin> transactions = super.getPaymentInfo(kbAccountId, kbPaymentId,
-                                                                                     properties, context);
+            properties, context);
 
         if (transactions.isEmpty()) {
             // We don't know about this payment (maybe it was aborted in a control plugin)
@@ -546,7 +547,7 @@ public class HyperswitchPaymentPluginApi extends
             if (transaction.getStatus() == PaymentPluginStatus.PENDING) {
                 HyperswitchResponsesRecord hyperswitchRecord = null;
                 final String paymentIntentId = PluginProperties.findPluginPropertyValue("payment_id",
-                                                                                        transaction.getProperties());
+                    transaction.getProperties());
 
                 PaymentsApi ClientApi = buildHyperswitchClient(context);
                 try {
@@ -589,7 +590,7 @@ public class HyperswitchPaymentPluginApi extends
                                  final Iterable<PluginProperty> properties, final CallContext context) throws PaymentPluginApiException {
         logger.info("[addPaymentMethod] Adding Payment Method");
         final Map<String, String> allProperties = PluginProperties.toStringMap(paymentMethodProps.getProperties(),
-                                                                               properties);
+            properties);
         // Extract client_secret if present
         String clientSecret = allProperties.get("client_secret");
 
@@ -809,7 +810,7 @@ public class HyperswitchPaymentPluginApi extends
         // Create new client
         try {
             com.hyperswitch.client.ApiClient apiClient = new com.hyperswitch.client.ApiClient();
-            ((ApiKeyAuth)apiClient.getAuthentication("api_key")).setApiKey(config.getHSApiKey());
+            ((ApiKeyAuth) apiClient.getAuthentication("api_key")).setApiKey(config.getHSApiKey());
             T newClient = apiClass.getConstructor(com.hyperswitch.client.ApiClient.class).newInstance(apiClient);
 
             // Cache the new client
@@ -895,13 +896,13 @@ public class HyperswitchPaymentPluginApi extends
                 throw new PaymentPluginApiException("Missing webhook signature", new IllegalStateException());
             }
 
-// Get API key for signature verification
+            // Get API key for signature verification
             final HyperswitchConfigProperties config = hyperswitchConfigurationHandler.getConfigurable(context.getTenantId());
             if (config == null || config.getWebhookSecret() == null) {
                 throw new PaymentPluginApiException("Missing webhook signing key configuration", new IllegalStateException());
             }
 
-// Verify webhook signature
+            // Verify webhook signature
             String verifiedPayload = verifyWebhookSignature(notification, signature, config.getWebhookSecret());
 
             // Process the verified webhook payload
