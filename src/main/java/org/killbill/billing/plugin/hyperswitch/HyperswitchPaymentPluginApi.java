@@ -985,7 +985,7 @@ public class HyperswitchPaymentPluginApi extends
                         context
                     );
 
-                    Payment payment = killbillAPI.getPaymentApi().getPayment(
+                    Payment setupPayment = killbillAPI.getPaymentApi().getPayment(
                         UUID.fromString(response.getKbPaymentId()),
                         false,
                         false,
@@ -994,57 +994,55 @@ public class HyperswitchPaymentPluginApi extends
                     );
 
                     // Get the actual amount from the original authorization
-                    BigDecimal amount = payment.getAuthAmount();
+                    BigDecimal amount = setupPayment.getAuthAmount();
                     if (amount.compareTo(BigDecimal.ZERO) == 0) {
-                        amount = payment.getTransactions()
+                        amount = setupPayment.getTransactions()
                             .stream()
                             .map(PaymentTransaction::getAmount)
                             .filter(Objects::nonNull)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                     }
 
-                    // Create new payment with actual amount using mandate
-                    PaymentsApi clientApi = buildHyperswitchClient(context);
-                    PaymentsCreateRequest paymentsRequest = new PaymentsCreateRequest();
-                    paymentsRequest.setAmount(KillBillMoney.toMinorUnits(payment.getCurrency().toString(), amount));
-                    paymentsRequest.setCurrency(convertCurrency(payment.getCurrency()));
-                    paymentsRequest.confirm(true);
-                    paymentsRequest.customerId(account.getId().toString());
-                    paymentsRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
-                    paymentsRequest.offSession(true);
-                    paymentsRequest.setMandateId(paymentMethodId);
-                    paymentsRequest.setCaptureMethod(CaptureMethod.AUTOMATIC);
-
-                    PaymentsResponse paymentResponse = clientApi.createAPayment(paymentsRequest);
-
-                    // Store the actual payment response
-                    this.hyperswitchDao.addResponse(
-                        account.getId(),
-                        payment.getId(),
-                        UUID.fromString(response.getKbPaymentTransactionId()),
-                        UUID.fromString(response.getKbPaymentMethodId()),
+                    // Create a new Kill Bill payment transaction using the wrapper
+                    PaymentApiWrapper wrapper = getPaymentApiWrapper();
+                    PaymentTransaction paymentTransaction = wrapper.createPayment(
                         TransactionType.PURCHASE,
+                        account,
+                        UUID.fromString(response.getKbPaymentMethodId()),
+                        null, // New payment, so no existing payment ID
                         amount,
-                        payment.getCurrency(),
-                        paymentResponse,
-                        DateTime.now(),
-                        context.getTenantId()
+                        setupPayment.getCurrency(),
+                        UUID.randomUUID().toString(), // New payment external key
+                        UUID.randomUUID().toString(), // New transaction external key
+                        Collections.emptyList(),
+                        context
                     );
 
-                    // Notify Kill Bill of successful authorization
+                    // Notify Kill Bill the setup payment is complete
                     getPaymentApiWrapper().transitionPendingTransaction(
                         account,
-                        payment.getId(),
+                        setupPayment.getId(),
                         UUID.fromString(response.getKbPaymentTransactionId()),
                         PaymentPluginStatus.PROCESSED,
                         context
                     );
                 } else {
-                    // Normal payment flow - just handle status update
-                    handleAuthorizationCapture(response, context);
+                    // Handle normal payment success
+                    Account account = killbillAPI.getAccountUserApi().getAccountById(
+                        UUID.fromString(response.getKbAccountId()),
+                        context
+                    );
+
+                    getPaymentApiWrapper().transitionPendingTransaction(
+                        account,
+                        UUID.fromString(response.getKbPaymentId()),
+                        UUID.fromString(response.getKbPaymentTransactionId()),
+                        PaymentPluginStatus.PROCESSED,
+                        context
+                    );
                 }
-            } catch (SQLException | com.hyperswitch.client.ApiException e) {
-                logger.error("Failed to process setup payment webhook", e);
+            } catch (Exception e) {
+                logger.error("Failed to process payment webhook", e);
             }
         }
     }
