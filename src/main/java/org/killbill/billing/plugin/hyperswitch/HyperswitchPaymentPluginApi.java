@@ -878,7 +878,6 @@ public class HyperswitchPaymentPluginApi extends
         }
     }
 
-    @Override
     public GatewayNotification processNotification(final String notification,
                                                    final Iterable<PluginProperty> properties,
                                                    final CallContext context) throws PaymentPluginApiException {
@@ -896,13 +895,13 @@ public class HyperswitchPaymentPluginApi extends
                 throw new PaymentPluginApiException("Missing webhook signature", new IllegalStateException());
             }
 
-            // Get API key for signature verification
+// Get API key for signature verification
             final HyperswitchConfigProperties config = hyperswitchConfigurationHandler.getConfigurable(context.getTenantId());
             if (config == null || config.getWebhookSecret() == null) {
                 throw new PaymentPluginApiException("Missing webhook signing key configuration", new IllegalStateException());
             }
 
-            // Verify webhook signature
+// Verify webhook signature
             String verifiedPayload = verifyWebhookSignature(notification, signature, config.getWebhookSecret());
 
             // Process the verified webhook payload
@@ -944,94 +943,104 @@ public class HyperswitchPaymentPluginApi extends
                 notification,
                 context.getTenantId());
 
-            // Handle different event types
-            switch (eventType) {
-                case "payment_authorized":
-                    // Handle authorized payment that requires capture
-                    if ("requires_capture".equals(status)) {
-                        // Get account
-                        Account account = killbillAPI.getAccountUserApi().getAccountById(
-                            UUID.fromString(response.getKbAccountId()),
-                            context
-                        );
-
-                        // Get payment to access the correct amount and currency
-                        Payment payment = killbillAPI.getPaymentApi().getPayment(
-                            UUID.fromString(response.getKbPaymentId()),
-                            false,
-                            false,
-                            Collections.emptyList(),
-                            context
-                        );
-
-
-                        // 1. Notify Kill Bill of successful authorization
-                        getPaymentApiWrapper().transitionPendingTransaction(
-                            account,
-                            UUID.fromString(response.getKbPaymentId()),
-                            UUID.fromString( response.getKbPaymentTransactionId()),
-                            PaymentPluginStatus.PROCESSED,
-                            context
-                        );
-
-                        BigDecimal amount =  payment.getAuthAmount();
-                        if (amount.compareTo(BigDecimal.ZERO) == 0) {
-                            amount = payment.getTransactions()
-                                .stream()
-                                .map(PaymentTransaction::getAmount)
-                                .filter(Objects::nonNull)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
-                        }
-
-                        // 2. Create capture transaction in Kill Bill using payment data
-                        killbillAPI.getPaymentApi().createCapture(
-                            account,
-                            UUID.fromString(response.getKbPaymentId()),
-                            amount,
-                            payment.getCurrency(),
-                            null,
-                            null,
-                            Collections.emptyList(),
-                            context
-                        );
-                    }
-                    break;
-
-                case "payment_succeeded":
-                    // Handle mandate for successful payments
-                    String paymentMethodId = content.path("payment_method_id").asText();
-                    if (paymentMethodId != null && !paymentMethodId.isEmpty()) {
-                        this.hyperswitchDao.updateHyperswitchId(
-                            UUID.fromString(response.getKbPaymentId()),
-                            paymentMethodId,
-                            UUID.fromString(response.getKbTenantId()));
-                    }
-                    break;
-            }
+            // Handle payment updates based on status
+            handlePaymentUpdate(eventType, status, content, response, context);
 
             // Update payment status
-            final Map<String, Object> additionalData = new HashMap<>();
-            additionalData.put("status", status);
-            if (errorCode != null && !errorCode.isEmpty() && !errorCode.equals("null")) {
-                additionalData.put("error_code", errorCode);
-            }
-            if (errorMessage != null && !errorMessage.isEmpty() && !errorCode.equals("null")) {
-                additionalData.put("error_message", errorMessage);
-            }
-
-            this.hyperswitchDao.updateResponse(response, additionalData);
+            updatePaymentStatus(response, status, errorCode, errorMessage);
 
             return new HyperswitchGatewayNotification(UUID.fromString(response.getKbPaymentId()));
 
-        } catch (SQLException e) {
-            throw new PaymentPluginApiException("Database error while processing notification", e);
-        } catch (AccountApiException e) {
-            throw new PaymentPluginApiException("Error retrieving account information", e);
-        } catch (PaymentApiException e) {
-            throw new PaymentPluginApiException("Error notifying payment state change", e);
         } catch (Exception e) {
             throw new PaymentPluginApiException("Error processing notification: " + e.getMessage(), e);
         }
+    }
+
+    private void handlePaymentUpdate(String eventType, String status, JsonNode content,
+                                     HyperswitchResponsesRecord response, CallContext context)
+        throws AccountApiException, PaymentApiException {
+
+        // Handle payment method updates for both success and authorization cases
+        String paymentMethodId = content.path("payment_method_id").asText();
+        if (paymentMethodId != null && !paymentMethodId.isEmpty()) {
+            try {
+                this.hyperswitchDao.updateHyperswitchId(
+                    UUID.fromString(response.getKbPaymentId()),
+                    paymentMethodId,
+                    UUID.fromString(response.getKbTenantId()));
+            } catch (SQLException e) {
+                logger.warn("Failed to update payment method ID: {}", paymentMethodId, e);
+            }
+        }
+
+        // Handle authorization requiring capture
+        if (eventType.equals("payment_authorized") && "requires_capture".equals(status)) {
+            handleAuthorizationCapture(response, context);
+        }
+    }
+
+    private void handleAuthorizationCapture(HyperswitchResponsesRecord response, CallContext context)
+        throws AccountApiException, PaymentApiException {
+
+        // Get account
+        Account account = killbillAPI.getAccountUserApi().getAccountById(
+            UUID.fromString(response.getKbAccountId()),
+            context
+        );
+
+        // Get payment to access the correct amount and currency
+        Payment payment = killbillAPI.getPaymentApi().getPayment(
+            UUID.fromString(response.getKbPaymentId()),
+            false,
+            false,
+            Collections.emptyList(),
+            context
+        );
+
+        // Notify Kill Bill of successful authorization
+        getPaymentApiWrapper().transitionPendingTransaction(
+            account,
+            UUID.fromString(response.getKbPaymentId()),
+            UUID.fromString(response.getKbPaymentTransactionId()),
+            PaymentPluginStatus.PROCESSED,
+            context
+        );
+
+        // Calculate capture amount
+        BigDecimal amount = payment.getAuthAmount();
+        if (amount.compareTo(BigDecimal.ZERO) == 0) {
+            amount = payment.getTransactions()
+                .stream()
+                .map(PaymentTransaction::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        // Create capture transaction
+        killbillAPI.getPaymentApi().createCapture(
+            account,
+            UUID.fromString(response.getKbPaymentId()),
+            amount,
+            payment.getCurrency(),
+            null,
+            null,
+            Collections.emptyList(),
+            context
+        );
+    }
+
+    private void updatePaymentStatus(HyperswitchResponsesRecord response, String status,
+                                     String errorCode, String errorMessage) throws SQLException {
+        final Map<String, Object> additionalData = new HashMap<>();
+        additionalData.put("status", status);
+        if (errorCode != null && !errorCode.isEmpty() && !errorCode.equals("null")) {
+            additionalData.put("error_code", errorCode);
+        }
+        if (errorMessage != null && !errorMessage.isEmpty() && !errorCode.equals("null")) {
+            additionalData.put("error_message", errorMessage);
+        }
+
+        this.hyperswitchDao.updateResponse(response, additionalData);
     }
 
     public PaymentTransactionInfoPlugin refundValidations(
