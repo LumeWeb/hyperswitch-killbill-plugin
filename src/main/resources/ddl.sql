@@ -56,7 +56,7 @@ create table hyperswitch_responses (
 ) /*! CHARACTER SET utf8 COLLATE utf8_bin */;
 create index hyperswitch_responses_kb_payment_id on hyperswitch_responses(kb_payment_id);
 create index hyperswitch_responses_kb_payment_transaction_id on hyperswitch_responses(kb_payment_transaction_id);
-create index hyperswitch_responses_payment_attmept_id on hyperswitch_responses(payment_attempt_id);
+create index hyperswitch_responses_payment_attempt_id on hyperswitch_responses(payment_attempt_id);
 
 drop table if exists hyperswitch_webhook_events;
 create table hyperswitch_webhook_events (

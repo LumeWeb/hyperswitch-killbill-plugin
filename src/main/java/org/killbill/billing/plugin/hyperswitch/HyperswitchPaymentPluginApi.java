@@ -941,8 +941,8 @@ public class HyperswitchPaymentPluginApi extends
             }
 
             // Find the payment record
-            final HyperswitchResponsesRecord response = this.hyperswitchDao.getSuccessfulResponse(
-                UUID.fromString(paymentId), context.getTenantId());
+            final HyperswitchResponsesRecord response = this.hyperswitchDao.getResponseByPaymentAttemptId(
+                paymentId, context.getTenantId());
 
             if (response == null) {
                 logger.warn("Unable to find payment record for webhook notification: {}", paymentId);

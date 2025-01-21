@@ -364,7 +364,6 @@ public class HyperswitchDao extends
                         .selectFrom(HYPERSWITCH_RESPONSES)
                         .where(DSL.field(HYPERSWITCH_RESPONSES.KB_PAYMENT_ID).equal(kbPaymentId.toString()))
                         .and(DSL.field(HYPERSWITCH_RESPONSES.KB_TENANT_ID).equal(kbTenantId.toString()))
-                        //                .and(DSL.field(HYPERSWITCH_RESPONSES.TRANSACTION_TYPE).equal(PURCHASE))
                         .orderBy(HYPERSWITCH_RESPONSES.RECORD_ID)
                         .fetchOne();
                 }
@@ -472,4 +471,15 @@ public class HyperswitchDao extends
                 .fetchOne(0, Integer.class) > 0);
     }
 
+    public HyperswitchResponsesRecord getResponseByPaymentAttemptId(
+        final String paymentAttemptId, final UUID kbTenantId) throws SQLException {
+        return execute(dataSource.getConnection(),
+            conn -> DSL.using(conn, dialect, settings)
+                .selectFrom(HYPERSWITCH_RESPONSES)
+                .where(HYPERSWITCH_RESPONSES.PAYMENT_ATTEMPT_ID.equal(paymentAttemptId))
+                .and(HYPERSWITCH_RESPONSES.KB_TENANT_ID.equal(kbTenantId.toString()))
+                .orderBy(HYPERSWITCH_RESPONSES.RECORD_ID.desc())
+                .limit(1)
+                .fetchOne());
+    }
 }
