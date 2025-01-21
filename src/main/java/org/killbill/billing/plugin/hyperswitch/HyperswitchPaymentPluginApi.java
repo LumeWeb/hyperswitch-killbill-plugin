@@ -967,7 +967,16 @@ public class HyperswitchPaymentPluginApi extends
                             context
                         );
 
-                        // 1. Create capture transaction in Kill Bill using payment data
+
+                        // 1. Notify Kill Bill of successful authorization
+                        killbillAPI.getPaymentApi().notifyPendingTransactionOfStateChanged(
+                            account,
+                            UUID.fromString(response.getKbPaymentTransactionId()),
+                            true, // isSuccess = true for successful authorization
+                            context
+                        );
+
+                        // 2. Create capture transaction in Kill Bill using payment data
                         killbillAPI.getPaymentApi().createCapture(
                             account,
                             UUID.fromString(response.getKbPaymentId()),
@@ -976,14 +985,6 @@ public class HyperswitchPaymentPluginApi extends
                             null,
                             null,
                             Collections.emptyList(),
-                            context
-                        );
-
-                        // 2. Notify Kill Bill of successful authorization
-                        killbillAPI.getPaymentApi().notifyPendingTransactionOfStateChanged(
-                            account,
-                            UUID.fromString(response.getKbPaymentTransactionId()),
-                            true, // isSuccess = true for successful authorization
                             context
                         );
                     }
