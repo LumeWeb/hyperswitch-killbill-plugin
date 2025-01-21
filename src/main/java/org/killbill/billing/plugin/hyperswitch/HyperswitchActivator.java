@@ -48,7 +48,6 @@ public class HyperswitchActivator extends KillbillActivatorBase {
     public static final String PLUGIN_NAME = "hyperswitch-plugin";
 
     private HyperswitchConfigurationHandler hyperswitchConfigurationHandler;
-    private OSGIKillbillEventDispatcher.OSGIKillbillEventHandler killbillEventHandler;
 
     @Override
     public void start(final BundleContext context) throws Exception {
@@ -63,8 +62,6 @@ public class HyperswitchActivator extends KillbillActivatorBase {
         final HyperswitchConfigProperties globalConfiguration = hyperswitchConfigurationHandler
                 .createConfigurable(configProperties.getProperties());
         hyperswitchConfigurationHandler.setDefaultConfigurable(globalConfiguration);
-        // Register an event listener (optional)
-        killbillEventHandler = new HyperswitchListener(killbillAPI);
 
         // As an example, this plugin registers a PaymentPluginApi (this could be
         // changed to any other plugin api)
@@ -77,33 +74,6 @@ public class HyperswitchActivator extends KillbillActivatorBase {
         // Expose a healthcheck (optional), so other plugins can check on the plugin status
         final Healthcheck healthcheck = new HyperswitchHealthcheck();
         registerHealthcheck(context, healthcheck);
-
-        // // This Plugin registers a InvoicePluginApi
-        // final InvoicePluginApi invoicePluginApi = new HyperswitchInvoicePluginApi(killbillAPI, configProperties, null);
-        // registerInvoicePluginApi(context, invoicePluginApi);
-
-        // Register a servlet (optional)
-        // final PluginApp pluginApp = new PluginAppBuilder(PLUGIN_NAME, killbillAPI, dataSource, super.clock,
-        //                                                  configProperties).withRouteClass(HyperswitchServlet.class)
-        //                                                                   .withRouteClass(HyperswitchHealthcheckServlet.class).withService(healthcheck).build();
-        // final HttpServlet httpServlet = PluginApp.createServlet(pluginApp);
-        // registerServlet(context, httpServlet);
-
-        registerHandlers();
-    }
-
-    @Override
-    public void stop(final BundleContext context) throws Exception {
-        // Do additional work on shutdown (optional)
-        super.stop(context);
-    }
-
-    private void registerHandlers() {
-        final PluginConfigurationEventHandler configHandler = new PluginConfigurationEventHandler(
-                hyperswitchConfigurationHandler);
-
-        dispatcher.registerEventHandlers(configHandler,
-                                         (OSGIFrameworkEventHandler) () -> dispatcher.registerEventHandlers(killbillEventHandler));
     }
 
     private void registerPaymentPluginApi(final BundleContext context, final PaymentPluginApi api) {
