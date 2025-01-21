@@ -355,6 +355,19 @@ public class HyperswitchPaymentPluginApi extends
             paymentsCreateRequest.customerId(kbAccountId.toString());
             paymentsCreateRequest.offSession(true);
             paymentsCreateRequest.setMandateId(paymentMethod.getHyperswitchId());
+/*            RecurringDetailsOneOf1 recurringDetailsImpl = new RecurringDetailsOneOf1()
+                .type(RecurringDetailsOneOf1.TypeEnum.PAYMENT_METHOD_ID)
+                .data(paymentMethod.getHyperswitchId());
+
+            paymentsCreateRequest.setRecurringDetails(recurringDetailsImpl);*/
+
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.createObjectNode()
+                .put("type", "payment_method_id")
+                .put("data", paymentMethod.getHyperswitchId());
+            RecurringDetails details = mapper.convertValue(node, RecurringDetails.class);
+            paymentsCreateRequest.setRecurringDetails(details);
+
 
             // Make API call
             PaymentsApi clientApi = buildHyperswitchClient(context);
