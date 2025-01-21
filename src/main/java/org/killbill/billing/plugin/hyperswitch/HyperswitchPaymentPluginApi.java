@@ -1008,15 +1008,15 @@ public class HyperswitchPaymentPluginApi extends
 
                     // Create a new Kill Bill payment transaction using the wrapper
                     PaymentApiWrapper wrapper = getPaymentApiWrapper();
-                    PaymentTransaction paymentTransaction = wrapper.createPayment(
+                    wrapper.createPayment(
                         TransactionType.PURCHASE,
                         account,
                         UUID.fromString(response.getKbPaymentMethodId()),
                         null, // New payment, so no existing payment ID
                         amount,
                         setupPayment.getCurrency(),
-                        UUID.randomUUID().toString(), // New payment external key
-                        UUID.randomUUID().toString(), // New transaction external key
+                        null, // New payment external key
+                        null, // New transaction external key
                         Collections.emptyList(),
                         context
                     );
