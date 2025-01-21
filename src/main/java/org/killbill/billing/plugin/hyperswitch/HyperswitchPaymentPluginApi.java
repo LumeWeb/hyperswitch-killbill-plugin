@@ -1007,10 +1007,11 @@ public class HyperswitchPaymentPluginApi extends
             // Update payment status
             final Map<String, Object> additionalData = new HashMap<>();
             additionalData.put("status", status);
-            if (errorCode != null && !errorCode.isEmpty()) {
+            if (errorCode != null && !errorCode.isEmpty() && !errorCode.equals("null")) {
+
                 additionalData.put("error_code", errorCode);
             }
-            if (errorMessage != null && !errorMessage.isEmpty()) {
+            if (errorMessage != null && !errorMessage.isEmpty() && !errorCode.equals("null")) {
                 additionalData.put("error_message", errorMessage);
             }
 
