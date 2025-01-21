@@ -140,7 +140,8 @@ public class HyperswitchPaymentPluginApi extends
 
             // Build payment request for authorization
             PaymentsCreateRequest paymentsCreateRequest = new PaymentsCreateRequest();
-            paymentsCreateRequest.setAmount(KillBillMoney.toMinorUnits(currency.toString(), amount));
+            //paymentsCreateRequest.setAmount(KillBillMoney.toMinorUnits(currency.toString(), amount));
+            paymentsCreateRequest.setAmount(0L);
             paymentsCreateRequest.setCurrency(convertCurrency(currency));
             paymentsCreateRequest.confirm(false);
             paymentsCreateRequest.customerId(kbAccountId.toString());
