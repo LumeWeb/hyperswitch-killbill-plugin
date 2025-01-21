@@ -143,16 +143,30 @@ public class HyperswitchPaymentPluginApi extends
             paymentsCreateRequest.setupFutureUsage(FutureUsage.OFF_SESSION);
 
             // Only create new payment if needed
+            HyperswitchResponsesRecord hyperswitchRecord;
             PaymentsResponse response;
             if (shouldCreateNewPayment) {
                 PaymentsApi clientApi = buildHyperswitchClient(context);
                 try {
                     response = clientApi.createAPayment(paymentsCreateRequest);
+                    response.setAmount(KillBillMoney.toMinorUnits(currency.toString(), amount));
+                    // Only store new responses
+                    hyperswitchRecord = storePaymentResponse(
+                        kbAccountId,
+                        kbPaymentId,
+                        kbTransactionId,
+                        kbPaymentMethodId,
+                        amount,
+                        currency,
+                        response,
+                        context.getTenantId()
+                    );
                 } catch (com.hyperswitch.client.ApiException e) {
                     throw new PaymentPluginApiException("Payment execution failed: " + e.getMessage(), e);
                 }
             } else {
-                // Reuse existing payment info
+                // Just use the existing record directly
+                hyperswitchRecord = existingResponse;
                 response = new PaymentsResponse();
                 response.setPaymentId(existingResponse.getPaymentAttemptId());
                 response.setClientSecret(getClientSecretFromResponse(existingResponse));
@@ -163,19 +177,6 @@ public class HyperswitchPaymentPluginApi extends
 
             // Process response
             PaymentPluginStatus paymentPluginStatus = convertPaymentStatus(response.getStatus());
-
-            // Store response in database for tracking
-            HyperswitchResponsesRecord hyperswitchRecord = storePaymentResponse(
-                kbAccountId,
-                kbPaymentId,
-                kbTransactionId,
-                kbPaymentMethodId,
-                amount,
-                currency,
-                response,
-                context.getTenantId()
-            );
-
             // Update payment method with client secret
             if (response.getClientSecret() != null) {
                 try {
