@@ -46,6 +46,7 @@ import org.killbill.billing.payment.plugin.api.PaymentPluginApiException;
 import org.killbill.billing.payment.plugin.api.PaymentPluginStatus;
 import org.killbill.billing.payment.plugin.api.PaymentTransactionInfoPlugin;
 import org.killbill.billing.plugin.api.PluginProperties;
+import org.killbill.billing.plugin.api.core.PaymentApiWrapper;
 import org.killbill.billing.plugin.api.payment.PluginPaymentMethodPlugin;
 import org.killbill.billing.plugin.api.payment.PluginPaymentPluginApi;
 import org.killbill.billing.plugin.hyperswitch.dao.HyperswitchDao;
@@ -969,10 +970,11 @@ public class HyperswitchPaymentPluginApi extends
 
 
                         // 1. Notify Kill Bill of successful authorization
-                        killbillAPI.getPaymentApi().notifyPendingTransactionOfStateChanged(
+                        getPaymentApiWrapper().transitionPendingTransaction(
                             account,
-                            UUID.fromString(response.getKbPaymentTransactionId()),
-                            true, // isSuccess = true for successful authorization
+                            UUID.fromString(response.getKbPaymentId()),
+                            UUID.fromString( response.getKbPaymentTransactionId()),
+                            PaymentPluginStatus.PROCESSED,
                             context
                         );
 
@@ -1048,4 +1050,9 @@ public class HyperswitchPaymentPluginApi extends
             return null;
         }
     }
+
+    private PaymentApiWrapper getPaymentApiWrapper() {
+        return new PaymentApiWrapper(killbillAPI, true);
+    }
+
 }
