@@ -19,7 +19,12 @@
 
 package org.killbill.billing.plugin.hyperswitch;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -74,6 +79,10 @@ import com.hyperswitch.client.model.PaymentsResponse;
 import com.hyperswitch.client.model.RefundRequest;
 import com.hyperswitch.client.model.RefundResponse;
 import com.hyperswitch.client.model.RefundStatus;
+import org.apache.commons.codec.binary.Hex;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 //
 // A 'real' payment plugin would of course implement this interface.
@@ -844,19 +853,101 @@ public class HyperswitchPaymentPluginApi extends
         return buildHyperswitchClient(tenantContext, RefundsApi.class);
     }
 
+    private String bytesToHex(byte[] hash) {
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
+
+    private String verifyWebhookSignature(String payload, String signature, String secretKey) throws PaymentPluginApiException {
+        try {
+            // 1. Raw payload verification
+            Mac macRaw = Mac.getInstance("HmacSHA512");
+            SecretKeySpec secretKeySpecRaw = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
+            macRaw.init(secretKeySpecRaw);
+            byte[] rawHmac = macRaw.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            String rawSignature = Hex.encodeHexString(rawHmac);
+
+            if (!MessageDigest.isEqual(signature.getBytes(StandardCharsets.UTF_8), rawSignature.getBytes(StandardCharsets.UTF_8))) {
+                throw new PaymentPluginApiException("Raw signature verification failed", new IllegalStateException());
+            }
+
+            // 2. JSON canonical verification
+            // Parse and re-serialize to get canonical form
+            JsonNode jsonNode = objectMapper.readTree(payload);
+            String canonicalJson = objectMapper.writeValueAsString(jsonNode);
+
+            Mac macJson = Mac.getInstance("HmacSHA512");
+            SecretKeySpec secretKeySpecJson = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
+            macJson.init(secretKeySpecJson);
+            byte[] jsonHmac = macJson.doFinal(canonicalJson.getBytes(StandardCharsets.UTF_8));
+            String jsonSignature = Hex.encodeHexString(jsonHmac);
+
+            if (!MessageDigest.isEqual(signature.getBytes(StandardCharsets.UTF_8), jsonSignature.getBytes(StandardCharsets.UTF_8))) {
+                throw new PaymentPluginApiException("JSON signature verification failed", new IllegalStateException());
+            }
+
+            return payload;
+        } catch (NoSuchAlgorithmException | InvalidKeyException | IOException e) {
+            throw new PaymentPluginApiException("Error verifying webhook signature", e);
+        }
+    }
+
     @Override
     public GatewayNotification processNotification(final String notification,
                                                    final Iterable<PluginProperty> properties,
                                                    final CallContext context) throws PaymentPluginApiException {
         try {
-            final JsonNode event = objectMapper.readTree(notification);
-            final String eventId = event.path("event_id").asText();
-            final String eventType = event.path("type").asText();
-            final String paymentId = event.path("data").path("payment_id").asText();
-            final String status = event.path("data").path("status").asText();
-            final String errorCode = event.path("data").path("error").path("code").asText();
-            final String errorMessage = event.path("data").path("error").path("message").asText();
+            // Get webhook signature from properties
+            String signature = null;
+            for (PluginProperty property : properties) {
+                if ("x-webhook-signature-512".equals(property.getKey())) {
+                    signature = (String) property.getValue();
+                    break;
+                }
+            }
 
+            if (signature == null || signature.isEmpty()) {
+                throw new PaymentPluginApiException("Missing webhook signature", new IllegalStateException());
+            }
+
+            // Get API key for signature verification
+            final HyperswitchConfigProperties config = hyperswitchConfigurationHandler.getConfigurable(context.getTenantId());
+            if (config == null || config.getWebhookSecret() == null) {
+                throw new PaymentPluginApiException("Missing webhook signing key configuration", new IllegalStateException());
+            }
+
+            // Verify webhook signature using both methods
+            String verifiedPayload = verifyWebhookSignature(notification, signature, config.getWebhookSecret());
+
+            // Process the verified webhook payload
+            final JsonNode event = objectMapper.readTree(verifiedPayload);
+            final String eventId = event.path("event_id").asText();
+            final String eventType = event.path("event_type").asText();
+            final String paymentId = event.path("content")
+                .path("object")
+                .path("payment_id")
+                .asText();
+            final String status = event.path("content")
+                .path("object")
+                .path("status")
+                .asText();
+            final String errorCode = event.path("content")
+                .path("object")
+                .path("error_code")
+                .asText();
+            final String errorMessage = event.path("content")
+                .path("object")
+                .path("error_message")
+                .asText();
+
+            // Rest of the processing remains the same...
             // Check for duplicate event
             if (hyperswitchDao.isEventProcessed(eventId, context.getTenantId())) {
                 logger.info("Skipping duplicate webhook event {}", eventId);
@@ -864,58 +955,58 @@ public class HyperswitchPaymentPluginApi extends
             }
 
             // Find the payment record
-            final HyperswitchResponsesRecord response;
-            try {
-                response = this.hyperswitchDao.getSuccessfulResponse(
-                    UUID.fromString(paymentId), context.getTenantId());
+            final HyperswitchResponsesRecord response = this.hyperswitchDao.getSuccessfulResponse(
+                UUID.fromString(paymentId), context.getTenantId());
 
-                if (response == null) {
-                    logger.warn("Unable to find payment record for webhook notification: {}", paymentId);
-                    return null;
-                }
-            } catch (SQLException e) {
-                throw new PaymentPluginApiException("Database error while processing notification", e);
+            if (response == null) {
+                logger.warn("Unable to find payment record for webhook notification: {}", paymentId);
+                return null;
             }
 
-            try {
-                // Store webhook event
-                this.hyperswitchDao.addWebhookEvent(
-                    UUID.fromString(response.getKbAccountId()),
-                    UUID.fromString(response.getKbPaymentId()),
-                    UUID.fromString(response.getKbPaymentTransactionId()),
-                    eventId,
-                    eventType,
-                    paymentId,
-                    status,
-                    errorCode,
-                    errorMessage,
-                    notification,
-                    context.getTenantId());
+            // Store webhook event
+            this.hyperswitchDao.addWebhookEvent(
+                UUID.fromString(response.getKbAccountId()),
+                UUID.fromString(response.getKbPaymentId()),
+                UUID.fromString(response.getKbPaymentTransactionId()),
+                eventId,
+                eventType,
+                paymentId,
+                status,
+                errorCode,
+                errorMessage,
+                notification,
+                context.getTenantId());
 
-                // Handle mandate for successful payments
-                if ("payment_intent.succeeded".equals(eventType)) {
-                    String paymentMethodId = event.path("data").path("payment_id").asText();
-                    if (paymentMethodId != null && !paymentMethodId.isEmpty()) {
-                        this.hyperswitchDao.updateHyperswitchId(UUID.fromString(response.getKbPaymentId()), paymentMethodId, UUID.fromString(response.getKbTenantId()));
-                    }
+            // Handle mandate for successful payments
+            if ("payment_intent.succeeded".equals(eventType)) {
+                String paymentMethodId = event.path("content")
+                    .path("object")
+                    .path("payment_id")
+                    .asText();
+                if (paymentMethodId != null && !paymentMethodId.isEmpty()) {
+                    this.hyperswitchDao.updateHyperswitchId(
+                        UUID.fromString(response.getKbPaymentId()),
+                        paymentMethodId,
+                        UUID.fromString(response.getKbTenantId()));
                 }
-
-                // Update payment status
-                final Map<String, Object> additionalData = new HashMap<>();
-                additionalData.put("status", status);
-                if (errorCode != null) {
-                    additionalData.put("error_code", errorCode);
-                }
-                if (errorMessage != null) {
-                    additionalData.put("error_message", errorMessage);
-                }
-
-                this.hyperswitchDao.updateResponse(response, additionalData);
-            } catch (SQLException e) {
-                throw new PaymentPluginApiException("Database error while processing notification", e);
             }
+
+            // Update payment status
+            final Map<String, Object> additionalData = new HashMap<>();
+            additionalData.put("status", status);
+            if (errorCode != null && !errorCode.isEmpty()) {
+                additionalData.put("error_code", errorCode);
+            }
+            if (errorMessage != null && !errorMessage.isEmpty()) {
+                additionalData.put("error_message", errorMessage);
+            }
+
+            this.hyperswitchDao.updateResponse(response, additionalData);
+
             return new HyperswitchGatewayNotification(UUID.fromString(response.getKbPaymentId()));
 
+        } catch (SQLException e) {
+            throw new PaymentPluginApiException("Database error while processing notification", e);
         } catch (Exception e) {
             throw new PaymentPluginApiException("Error processing notification: " + e.getMessage(), e);
         }
