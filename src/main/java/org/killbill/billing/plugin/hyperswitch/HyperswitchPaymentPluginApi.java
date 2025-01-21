@@ -979,11 +979,20 @@ public class HyperswitchPaymentPluginApi extends
                             context
                         );
 
+                        BigDecimal amount =  payment.getAuthAmount();
+                        if (amount.compareTo(BigDecimal.ZERO) == 0) {
+                            amount = payment.getTransactions()
+                                .stream()
+                                .map(PaymentTransaction::getAmount)
+                                .filter(Objects::nonNull)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        }
+
                         // 2. Create capture transaction in Kill Bill using payment data
                         killbillAPI.getPaymentApi().createCapture(
                             account,
                             UUID.fromString(response.getKbPaymentId()),
-                            payment.getAuthAmount(),
+                            amount,
                             payment.getCurrency(),
                             null,
                             null,
