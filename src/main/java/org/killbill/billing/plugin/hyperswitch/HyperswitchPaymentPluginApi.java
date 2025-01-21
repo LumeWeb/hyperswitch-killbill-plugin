@@ -364,7 +364,7 @@ public class HyperswitchPaymentPluginApi extends
             try {
 
                 JsonNode node = mapper.createObjectNode()
-                    .put("type", "payment_method_id")
+                    .put("type", "RecurringDetails_oneOf_1")
                     .put("data", paymentMethod.getHyperswitchId());
                 RecurringDetails details = mapper.convertValue(node, RecurringDetails.class);
                 paymentsCreateRequest.setRecurringDetails(details);
