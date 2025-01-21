@@ -978,7 +978,10 @@ public class HyperswitchPaymentPluginApi extends
         if (eventType.equals("payment_succeeded") && "succeeded".equals(status)) {
             try {
                 // Check if this was a setup payment (amount = 0)
-                if (response.getAmount().compareTo(BigDecimal.ZERO) == 0) {
+                // Get amount from webhook content
+                BigDecimal webhookAmount = new BigDecimal(content.path("amount").asText("0"));
+
+                if (webhookAmount.compareTo(BigDecimal.ZERO) == 0) {
                     // Get account and payment info
                     Account account = killbillAPI.getAccountUserApi().getAccountById(
                         UUID.fromString(response.getKbAccountId()),
@@ -1045,56 +1048,6 @@ public class HyperswitchPaymentPluginApi extends
                 logger.error("Failed to process payment webhook", e);
             }
         }
-    }
-
-    private void handleAuthorizationCapture(HyperswitchResponsesRecord response, CallContext context)
-        throws AccountApiException, PaymentApiException {
-
-        // Get account
-        Account account = killbillAPI.getAccountUserApi().getAccountById(
-            UUID.fromString(response.getKbAccountId()),
-            context
-        );
-
-        // Get payment to access the correct amount and currency
-        Payment payment = killbillAPI.getPaymentApi().getPayment(
-            UUID.fromString(response.getKbPaymentId()),
-            false,
-            false,
-            Collections.emptyList(),
-            context
-        );
-
-        // Notify Kill Bill of successful authorization
-        getPaymentApiWrapper().transitionPendingTransaction(
-            account,
-            UUID.fromString(response.getKbPaymentId()),
-            UUID.fromString(response.getKbPaymentTransactionId()),
-            PaymentPluginStatus.PROCESSED,
-            context
-        );
-
-        // Calculate capture amount
-        BigDecimal amount = payment.getAuthAmount();
-        if (amount.compareTo(BigDecimal.ZERO) == 0) {
-            amount = payment.getTransactions()
-                .stream()
-                .map(PaymentTransaction::getAmount)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        }
-
-        // Create capture transaction
-        killbillAPI.getPaymentApi().createCapture(
-            account,
-            UUID.fromString(response.getKbPaymentId()),
-            amount,
-            payment.getCurrency(),
-            null,
-            null,
-            Collections.emptyList(),
-            context
-        );
     }
 
     private void updatePaymentStatus(HyperswitchResponsesRecord response, String status,
