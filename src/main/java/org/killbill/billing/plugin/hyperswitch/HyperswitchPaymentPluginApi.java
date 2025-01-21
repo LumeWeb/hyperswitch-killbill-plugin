@@ -974,8 +974,9 @@ public class HyperswitchPaymentPluginApi extends
             }
         }
 
-        // Handle authorization requiring capture
-        if (eventType.equals("payment_authorized") && "requires_capture".equals(status)) {
+        // Handle cases requiring capture
+        if ((eventType.equals("payment_authorized") && "requires_capture".equals(status)) ||
+            (eventType.equals("payment_succeeded") && "succeeded".equals(status))) {
             handleAuthorizationCapture(response, context);
         }
     }
