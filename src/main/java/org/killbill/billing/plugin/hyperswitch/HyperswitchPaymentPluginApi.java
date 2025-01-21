@@ -145,7 +145,7 @@ public class HyperswitchPaymentPluginApi extends
             paymentsCreateRequest.setCurrency(convertCurrency(currency));
             paymentsCreateRequest.confirm(false);
             paymentsCreateRequest.customerId(kbAccountId.toString());
-            paymentsCreateRequest.offSession(false);
+            paymentsCreateRequest.offSession(true);
             paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
             paymentsCreateRequest.setCaptureMethod(CaptureMethod.MANUAL);
 
