@@ -361,11 +361,17 @@ public class HyperswitchPaymentPluginApi extends
             paymentsCreateRequest.setRecurringDetails(recurringDetailsImpl);*/
 
             ObjectMapper mapper = new ObjectMapper();
-            JsonNode node = mapper.createObjectNode()
-                .put("type", "payment_method_id")
-                .put("data", paymentMethod.getHyperswitchId());
-            RecurringDetails details = mapper.convertValue(node, RecurringDetails.class);
-            paymentsCreateRequest.setRecurringDetails(details);
+            try {
+
+                JsonNode node = mapper.createObjectNode()
+                    .put("type", "payment_method_id")
+                    .put("data", paymentMethod.getHyperswitchId());
+                RecurringDetails details = mapper.convertValue(node, RecurringDetails.class);
+                paymentsCreateRequest.setRecurringDetails(details);
+
+            } catch (Exception e) {
+                throw new PaymentPluginApiException("Unable to run payment", e);
+            }
 
 
             // Make API call
