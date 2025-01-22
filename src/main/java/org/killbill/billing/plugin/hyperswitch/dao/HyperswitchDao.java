@@ -124,13 +124,13 @@ public class HyperswitchDao extends
             });
     }
 
-    public void updateHyperswitchId(final UUID kbPaymentMethodId,
-                                    final String mandateId,
-                                    final UUID kbTenantId) throws SQLException {
+    public void updatePaymentMethodId(final UUID kbPaymentMethodId,
+                                      final String paymentMethodId,
+                                      final UUID kbTenantId) throws SQLException {
         execute(dataSource.getConnection(),
             conn -> DSL.using(conn, dialect, settings)
                 .update(HYPERSWITCH_PAYMENT_METHODS)
-                .set(HYPERSWITCH_PAYMENT_METHODS.HYPERSWITCH_ID, mandateId)
+                .set(HYPERSWITCH_PAYMENT_METHODS.HYPERSWITCH_ID, paymentMethodId)
                 .where(HYPERSWITCH_PAYMENT_METHODS.KB_PAYMENT_METHOD_ID.equal(kbPaymentMethodId.toString()))
                 .and(HYPERSWITCH_PAYMENT_METHODS.KB_TENANT_ID.equal(kbTenantId.toString()))
                 .execute());

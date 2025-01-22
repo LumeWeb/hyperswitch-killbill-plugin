@@ -19,7 +19,6 @@
 
 package org.killbill.billing.plugin.hyperswitch;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -973,7 +972,7 @@ public class HyperswitchPaymentPluginApi extends
         String paymentMethodId = content.path("payment_method_id").asText();
         if (paymentMethodId != null && !paymentMethodId.isEmpty()) {
             try {
-                this.hyperswitchDao.updateHyperswitchId(
+                this.hyperswitchDao.updatePaymentMethodId(
                     UUID.fromString(response.getKbPaymentId()),
                     paymentMethodId,
                     UUID.fromString(response.getKbTenantId()));
