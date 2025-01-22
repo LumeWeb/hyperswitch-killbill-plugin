@@ -26,6 +26,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -33,6 +34,7 @@ import com.hyperswitch.client.auth.ApiKeyAuth;
 import com.hyperswitch.client.model.*;
 import org.apache.commons.codec.binary.Hex;
 import org.joda.time.DateTime;
+import org.killbill.billing.ObjectType;
 import org.killbill.billing.account.api.Account;
 import org.killbill.billing.account.api.AccountApiException;
 import org.killbill.billing.catalog.api.Currency;
@@ -60,6 +62,7 @@ import org.killbill.billing.plugin.util.KillBillMoney;
 import org.killbill.billing.util.callcontext.CallContext;
 import org.killbill.billing.util.callcontext.TenantContext;
 import org.killbill.billing.util.entity.Pagination;
+import org.killbill.billing.util.tag.TagDefinition;
 import org.killbill.clock.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +75,8 @@ import com.hyperswitch.client.api.RefundsApi;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+
+import org.killbill.billing.util.tag.Tag;
 
 //
 // A 'real' payment plugin would of course implement this interface.
@@ -1036,6 +1041,25 @@ public class HyperswitchPaymentPluginApi extends
                         Collections.emptyList(),
                         context
                     );
+                    // Get all system tag definitions
+                    final Collection<TagDefinition> tagDefinitions = killbillAPI.getTagUserApi().getTagDefinitions(context);
+
+                    // Create a set of the tag definition IDs we want to remove
+                    final Set<UUID> tagsToRemove = tagDefinitions.stream()
+                        .filter(def -> def.getName().equals("AUTO_INVOICING_OFF") || def.getName().equals("AUTO_PAY_OFF"))
+                        .map(TagDefinition::getId)
+                        .collect(Collectors.toSet());
+
+                    // Get existing tags on the account and remove matching ones
+                    final Collection<Tag> accountTags = killbillAPI.getTagUserApi().getTagsForAccount(account.getId(), false, context);
+                    final List<UUID> tagIdsToRemove = accountTags.stream()
+                        .filter(tag -> tagsToRemove.contains(tag.getTagDefinitionId()))
+                        .map(Tag::getId)
+                        .collect(Collectors.toList());
+
+                    if (!tagIdsToRemove.isEmpty()) {
+                        killbillAPI.getTagUserApi().removeTags(account.getId(), ObjectType.ACCOUNT, tagIdsToRemove, context);
+                    }
 
                 } else {
                     // Handle normal payment success
