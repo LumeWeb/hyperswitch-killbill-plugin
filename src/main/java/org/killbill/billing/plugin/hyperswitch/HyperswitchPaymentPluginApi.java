@@ -1041,12 +1041,13 @@ public class HyperswitchPaymentPluginApi extends
                         Collections.emptyList(),
                         context
                     );
-                    // Get all system tag definitions
-                    final Collection<TagDefinition> tagDefinitions = killbillAPI.getTagUserApi().getTagDefinitions(context);
+                    // Define the set of tag names we want to remove
+                    final Set<String> targetTagNames = Set.of("AUTO_INVOICING_OFF", "AUTO_PAY_OFF");
 
-                    // Create a set of the tag definition IDs we want to remove
+                    // Get all system tag definitions and filter for our target tags
+                    final Collection<TagDefinition> tagDefinitions = killbillAPI.getTagUserApi().getTagDefinitions(context);
                     final Set<UUID> tagsToRemove = tagDefinitions.stream()
-                        .filter(def -> def.getName().equals("AUTO_INVOICING_OFF") || def.getName().equals("AUTO_PAY_OFF"))
+                        .filter(def -> targetTagNames.contains(def.getName()))
                         .map(TagDefinition::getId)
                         .collect(Collectors.toSet());
 
