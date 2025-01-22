@@ -1,14 +1,18 @@
 package org.killbill.billing.plugin.hyperswitch.client;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.hyperswitch.client.model.RecurringDetails;
 import com.hyperswitch.client.model.NetworkTransactionIdAndCardDetails;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import java.io.IOException;
 
 @JsonTypeName("payment_method_id")
+@JsonSerialize(using = RecurringDetailsOneOf1Extended.CustomSerializer.class)
 public class RecurringDetailsOneOf1Extended extends RecurringDetails {
 
-    @JsonProperty("data")
     private String paymentMethodId;
 
     public RecurringDetailsOneOf1Extended setPaymentMethodId(String id) {
@@ -17,15 +21,26 @@ public class RecurringDetailsOneOf1Extended extends RecurringDetails {
     }
 
     @Override
-    @JsonProperty("data")
     public NetworkTransactionIdAndCardDetails getData() {
-        // This still needs to exist for inheritance, but won't be used in serialization
         return null;
     }
 
-    // Add this to override the parent's serialization
-    @JsonProperty("data")
-    public String getStringData() {
+    public String getPaymentMethodId() {
         return paymentMethodId;
+    }
+
+    public static class CustomSerializer extends StdSerializer<RecurringDetailsOneOf1Extended> {
+        public CustomSerializer() {
+            super(RecurringDetailsOneOf1Extended.class);
+        }
+
+        @Override
+        public void serialize(RecurringDetailsOneOf1Extended value, JsonGenerator gen, SerializerProvider provider)
+            throws IOException {
+            gen.writeStartObject();
+            gen.writeStringField("type", "payment_method_id");
+            gen.writeStringField("data", value.getPaymentMethodId());
+            gen.writeEndObject();
+        }
     }
 }
