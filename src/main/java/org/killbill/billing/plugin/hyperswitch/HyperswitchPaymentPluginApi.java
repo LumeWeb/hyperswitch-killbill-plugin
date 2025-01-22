@@ -355,7 +355,6 @@ public class HyperswitchPaymentPluginApi extends
             paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
             paymentsCreateRequest.customerId(kbAccountId.toString());
             paymentsCreateRequest.offSession(true);
-            paymentsCreateRequest.setMandateId(paymentMethod.getHyperswitchId());
             try {
                 paymentsCreateRequest.setRecurringDetails(
                     new RecurringDetailsOneOf1Extended()
