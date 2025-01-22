@@ -1,13 +1,11 @@
-package com.hyperswitch.client.model;
+package org.killbill.billing.plugin.hyperswitch.client;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import javax.annotation.Nonnull;
+import com.hyperswitch.client.model.NetworkTransactionIdAndCardDetails;
+import com.hyperswitch.client.model.RecurringDetails;
 
 @JsonPropertyOrder({"type", "data"})
 @JsonTypeName("RecurringDetails_oneOf_1")
