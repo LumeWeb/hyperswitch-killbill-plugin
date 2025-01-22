@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hyperswitch.client.auth.ApiKeyAuth;
 import com.hyperswitch.client.model.*;
+import com.hyperswitch.client.model.RecurringDetailsOneOf1Extended;
 import org.apache.commons.codec.binary.Hex;
 import org.joda.time.DateTime;
 import org.killbill.billing.account.api.Account;
@@ -354,25 +355,12 @@ public class HyperswitchPaymentPluginApi extends
             paymentsCreateRequest.profileId(hyperswitchConfigurationHandler.getConfigurable(context.getTenantId()).getProfileId());
             paymentsCreateRequest.customerId(kbAccountId.toString());
             paymentsCreateRequest.offSession(true);
-/*            RecurringDetailsOneOf1 recurringDetailsImpl = new RecurringDetailsOneOf1()
-                .type(RecurringDetailsOneOf1.TypeEnum.PAYMENT_METHOD_ID)
-                .data(paymentMethod.getHyperswitchId());
-
-            paymentsCreateRequest.setRecurringDetails(recurringDetailsImpl);*/
-
-            ObjectMapper mapper = new ObjectMapper();
-            try {
-
-                JsonNode node = mapper.createObjectNode()
-                    .put("type", "RecurringDetails_oneOf_1")
-                    .put("data", paymentMethod.getHyperswitchId());
-                RecurringDetails details = mapper.convertValue(node, RecurringDetails.class);
-                paymentsCreateRequest.setRecurringDetails(details);
-
-            } catch (Exception e) {
-                throw new PaymentPluginApiException("Unable to run payment", e);
-            }
-
+            paymentsCreateRequest.setMandateId(paymentMethod.getHyperswitchId());
+            paymentsCreateRequest.setRecurringDetails(
+                new RecurringDetailsOneOf1Extended()
+                    .type(RecurringDetailsOneOf1Extended.TypeEnum.PAYMENT_METHOD_ID)
+                    .data(paymentMethod.getHyperswitchId())
+            );
 
             // Make API call
             PaymentsApi clientApi = buildHyperswitchClient(context);
