@@ -973,7 +973,7 @@ public class HyperswitchPaymentPluginApi extends
         if (paymentMethodId != null && !paymentMethodId.isEmpty()) {
             try {
                 this.hyperswitchDao.updatePaymentMethodId(
-                    UUID.fromString(response.getKbPaymentId()),
+                    UUID.fromString(response.getKbPaymentMethodId()),
                     paymentMethodId,
                     UUID.fromString(response.getKbTenantId()));
             } catch (SQLException e) {
