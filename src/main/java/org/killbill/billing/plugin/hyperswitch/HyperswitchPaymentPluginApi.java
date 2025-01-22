@@ -1013,6 +1013,15 @@ public class HyperswitchPaymentPluginApi extends
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                     }
 
+                    // Notify Kill Bill the setup payment is complete
+                    getPaymentApiWrapper().transitionPendingTransaction(
+                        account,
+                        setupPayment.getId(),
+                        UUID.fromString(response.getKbPaymentTransactionId()),
+                        PaymentPluginStatus.PROCESSED,
+                        context
+                    );
+
                     // Create a new Kill Bill payment transaction using the wrapper
                     PaymentApiWrapper wrapper = getPaymentApiWrapper();
                     wrapper.createPayment(
@@ -1028,14 +1037,6 @@ public class HyperswitchPaymentPluginApi extends
                         context
                     );
 
-                    // Notify Kill Bill the setup payment is complete
-                    getPaymentApiWrapper().transitionPendingTransaction(
-                        account,
-                        setupPayment.getId(),
-                        UUID.fromString(response.getKbPaymentTransactionId()),
-                        PaymentPluginStatus.PROCESSED,
-                        context
-                    );
                 } else {
                     // Handle normal payment success
                     Account account = killbillAPI.getAccountUserApi().getAccountById(
