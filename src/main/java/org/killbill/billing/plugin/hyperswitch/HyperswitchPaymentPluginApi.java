@@ -1044,22 +1044,16 @@ public class HyperswitchPaymentPluginApi extends
                     // Define the set of tag names we want to remove
                     final Set<String> targetTagNames = Set.of("AUTO_INVOICING_OFF", "AUTO_PAY_OFF");
 
-                    // Get all system tag definitions and filter for our target tags
+                    // Get all system tag definitions and get their IDs
                     final Collection<TagDefinition> tagDefinitions = killbillAPI.getTagUserApi().getTagDefinitions(context);
-                    final Set<UUID> tagsToRemove = tagDefinitions.stream()
+                    final Set<UUID> tagDefIdsToRemove = tagDefinitions.stream()
                         .filter(def -> targetTagNames.contains(def.getName()))
                         .map(TagDefinition::getId)
                         .collect(Collectors.toSet());
 
-                    // Get existing tags on the account and remove matching ones
-                    final Collection<Tag> accountTags = killbillAPI.getTagUserApi().getTagsForAccount(account.getId(), false, context);
-                    final List<UUID> tagIdsToRemove = accountTags.stream()
-                        .filter(tag -> tagsToRemove.contains(tag.getTagDefinitionId()))
-                        .map(Tag::getId)
-                        .collect(Collectors.toList());
-
-                    if (!tagIdsToRemove.isEmpty()) {
-                        killbillAPI.getTagUserApi().removeTags(account.getId(), ObjectType.ACCOUNT, tagIdsToRemove, context);
+                    if (!tagDefIdsToRemove.isEmpty()) {
+                        // Remove tags directly using their definition IDs
+                        killbillAPI.getTagUserApi().removeTags(account.getId(), ObjectType.ACCOUNT, tagDefIdsToRemove, context);
                     }
 
                 } else {
