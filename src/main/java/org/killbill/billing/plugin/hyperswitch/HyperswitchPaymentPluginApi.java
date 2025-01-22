@@ -359,8 +359,7 @@ public class HyperswitchPaymentPluginApi extends
             try {
                 paymentsCreateRequest.setRecurringDetails(
                     new RecurringDetailsOneOf1Extended()
-                        .type(RecurringDetailsOneOf1Extended.TypeEnum.PAYMENT_METHOD_ID)
-                        .data(paymentMethod.getHyperswitchId())
+                        .setPaymentMethodId(paymentMethod.getHyperswitchId())
                 );
 
             } catch (Exception e) {
